@@ -1,0 +1,2 @@
+# Phase 1 (CPU stub) — only requires the RunPod SDK.
+runpod>=1.6.2

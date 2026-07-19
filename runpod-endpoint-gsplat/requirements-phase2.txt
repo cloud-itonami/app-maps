@@ -1,0 +1,19 @@
+# Phase 2 (real Mapillary → COLMAP → gsplat → PLY trainer).
+#
+# Installed on top of `requirements.txt` only when the Dockerfile is
+# built with the CUDA BASE image (see Dockerfile comment block).
+# Pinned to versions known to be ABI-compatible with
+# `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04`.
+#
+# `colmap` itself is installed via apt in the Dockerfile; pycolmap is
+# the Python binding that talks to it.
+torch==2.12.1
+torchvision==0.19.0
+pycolmap==3.10.0
+gsplat==1.4.0
+imageio[pyav]>=2.34
+imageio-ffmpeg>=0.5
+pillow>=10.4
+numpy>=2.0,<2.2
+tqdm>=4.66
+requests>=2.34.2

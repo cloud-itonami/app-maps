@@ -1,0 +1,274 @@
+{
+  "_comment": "Maps source DID seed. One entry per source DID per maps CLAUDE.md §Source DIDs. Excludes did:web:site.etzhayyim.com (cross-actor, lives on site PDS).",
+  "_adr": "2605231400",
+  "_lexicon": "com.etzhayyim.maps.source",
+  "sources": [
+    {
+      "slug": "geocode",
+      "did": "did:web:maps.etzhayyim.com:geocode",
+      "displayName": "Geocoding (forward + reverse)",
+      "externalSource": "Nominatim (OSM)",
+      "ttl": "permanent",
+      "license": "ODbL",
+      "category": "geocode",
+      "status": "active",
+      "notes": "Replaces direct Nominatim queries with graph-cached results. MISS triggers async collection job."
+    },
+    {
+      "slug": "weather",
+      "did": "did:web:maps.etzhayyim.com:weather",
+      "displayName": "Weather observation / forecast",
+      "externalSource": "Open-Meteo",
+      "ttl": "PT1H",
+      "license": "CC-BY-4.0",
+      "category": "weather",
+      "status": "active",
+      "notes": "TTL 1h — stale weather records re-fetched on read MISS."
+    },
+    {
+      "slug": "ip-geolocation",
+      "did": "did:web:maps.etzhayyim.com:ip_geolocation",
+      "displayName": "IP-to-coordinate lookup",
+      "externalSource": "ip-api",
+      "ttl": "P1D",
+      "license": "commercial",
+      "category": "geocode",
+      "status": "active"
+    },
+    {
+      "slug": "infrastructure",
+      "did": "did:web:maps.etzhayyim.com:infrastructure",
+      "displayName": "Infrastructure features (utilities, water, electric, telecom, transit)",
+      "externalSource": "OSM Overpass API",
+      "ttl": "P7D",
+      "license": "ODbL",
+      "category": "infrastructure",
+      "status": "active",
+      "notes": "Heartbeat dispatch — periodic Overpass query against rotating bbox set."
+    },
+    {
+      "slug": "tile",
+      "did": "did:web:maps.etzhayyim.com:tile",
+      "displayName": "Base map vector tiles",
+      "externalSource": "OpenFreeMap",
+      "ttl": "P30D",
+      "license": "ODbL",
+      "category": "geocode",
+      "status": "active",
+      "notes": "OSM raster fallback for zoom ≥7 tracked separately as a maps-shader-view-precision migration."
+    },
+    {
+      "slug": "street-view",
+      "did": "did:web:maps.etzhayyim.com:street_view",
+      "displayName": "Street-level imagery",
+      "externalSource": "Mapillary",
+      "ttl": "P30D",
+      "license": "CC-BY-SA-4.0",
+      "category": "vision",
+      "status": "active"
+    },
+    {
+      "slug": "planet",
+      "did": "did:web:maps.etzhayyim.com:planet",
+      "displayName": "OSM Planet snapshot",
+      "externalSource": "OSM Planet",
+      "ttl": "P7D",
+      "license": "ODbL",
+      "category": "geocode",
+      "status": "active",
+      "notes": "Weekly snapshot — feeds bulk-ingest pods."
+    },
+    {
+      "slug": "user-post",
+      "did": "did:web:maps.etzhayyim.com:user_post",
+      "displayName": "User post EXIF geolocation",
+      "externalSource": "User post images (atproto blobs)",
+      "ttl": "permanent",
+      "license": "user-owned",
+      "category": "user",
+      "status": "active",
+      "notes": "Per ADR-2605181100, encrypted user-post EXIF goes through com.etzhayyim.encrypted.* envelope."
+    },
+    {
+      "slug": "mapraly",
+      "did": "did:web:maps.etzhayyim.com:mapraly",
+      "displayName": "Mapraly POI / route",
+      "externalSource": "Mapraly",
+      "ttl": "P7D",
+      "license": "commercial",
+      "category": "transport",
+      "status": "active"
+    },
+    {
+      "slug": "vision",
+      "did": "did:web:maps.etzhayyim.com:vision",
+      "displayName": "Vision-derived spatial entities",
+      "externalSource": "Murakumo Vision (qwen3-vl-8b)",
+      "ttl": "permanent",
+      "license": "internal",
+      "category": "vision",
+      "status": "active"
+    },
+    {
+      "slug": "satellite",
+      "did": "did:web:maps.etzhayyim.com:satellite",
+      "displayName": "Satellite imagery (multi-sensor)",
+      "externalSource": "Sentinel-2 L2A (ESA) / Landsat C2L2 (USGS) / Sentinel-1 GRD SAR / HLS (NASA) / Copernicus DEM / NAIP (USDA)",
+      "ttl": "P30D",
+      "license": "public-domain-or-ODbL-by-sensor",
+      "category": "satellite",
+      "status": "active",
+      "notes": "Free STAC catalogs. Heartbeat dispatch + bulk-ingest pod."
+    },
+    {
+      "slug": "seismic",
+      "did": "did:web:maps.etzhayyim.com:seismic",
+      "displayName": "Earthquake hazard feed",
+      "externalSource": "USGS Earthquake Hazards API",
+      "ttl": "PT15M",
+      "license": "public-domain",
+      "category": "hazard",
+      "status": "active",
+      "notes": "Heartbeat dispatch every 15 min."
+    },
+    {
+      "slug": "gtfs",
+      "did": "did:web:maps.etzhayyim.com:gtfs",
+      "displayName": "GTFS-JP (Japan public transit, bus + train + timetable summary)",
+      "externalSource": "MLIT GTFS-JP per-agency feed.zip × N",
+      "ttl": "P1D",
+      "license": "varies-by-operator",
+      "category": "transport",
+      "status": "active",
+      "notes": "Heartbeat dispatch + bulk-ingest pod; BPMN bulkRefreshGtfsJp R/PT24H. GTFS-RT (vehicle position / trip update / alerts) tracked as a kotoba-datomic-projection per MIGRATION-TODO Tier C."
+    },
+    {
+      "slug": "registry-openflights",
+      "did": "did:web:maps.etzhayyim.com:registry:openflights",
+      "displayName": "OpenFlights airport + route registry",
+      "externalSource": "OpenFlights airports.dat + routes.dat + airlines.dat",
+      "ttl": "P7D",
+      "license": "ODbL",
+      "category": "transport",
+      "status": "active",
+      "notes": "bulk-ingest pod; BPMN bulkRefreshOpenflights R/P7D."
+    },
+    {
+      "slug": "registry-osm-ferry",
+      "did": "did:web:maps.etzhayyim.com:registry:osm:ferry",
+      "displayName": "OSM ferry routes (sea path)",
+      "externalSource": "OSM Overpass relation[route=ferry] × 7 continent bbox + node[amenity=ferry_terminal]",
+      "ttl": "P7D",
+      "license": "ODbL",
+      "category": "transport",
+      "status": "active",
+      "notes": "bulk-ingest pod; BPMN bulkRefreshFerryRoutes R/P7D."
+    },
+    {
+      "slug": "registry-gleif",
+      "did": "did:web:maps.etzhayyim.com:registry:gleif",
+      "displayName": "GLEIF Legal Entity Identifier (LEI)",
+      "externalSource": "GLEIF (Global LEI Foundation)",
+      "ttl": "P30D",
+      "license": "CC0-1.0",
+      "category": "registry",
+      "status": "active",
+      "notes": "~2.5M legal entities, P0 coverage target."
+    },
+    {
+      "slug": "registry-opencorporates",
+      "did": "did:web:maps.etzhayyim.com:registry:opencorporates",
+      "displayName": "OpenCorporates",
+      "externalSource": "OpenCorporates API",
+      "ttl": "P7D",
+      "license": "ODbL",
+      "category": "registry",
+      "status": "active",
+      "notes": "~200M companies, P1 coverage target."
+    },
+    {
+      "slug": "registry-wikidata",
+      "did": "did:web:maps.etzhayyim.com:registry:wikidata",
+      "displayName": "Wikidata corporations / HQ coords",
+      "externalSource": "Wikidata SPARQL",
+      "ttl": "P7D",
+      "license": "CC0-1.0",
+      "category": "registry",
+      "status": "active",
+      "notes": "~500K corporations with HQ coords, P0 coverage target."
+    },
+    {
+      "slug": "registry-osm",
+      "did": "did:web:maps.etzhayyim.com:registry:osm",
+      "displayName": "OSM operator / owner tags",
+      "externalSource": "OSM Overpass",
+      "ttl": "P7D",
+      "license": "ODbL",
+      "category": "registry",
+      "status": "active",
+      "notes": "~50M POIs, P2 coverage target."
+    },
+    {
+      "slug": "registry-jp-moj",
+      "did": "did:web:maps.etzhayyim.com:registry:jp-moj",
+      "displayName": "Japan MOJ 登記情報 (real-property registry)",
+      "externalSource": "Ministry of Justice 法人登記 / 不動産登記",
+      "ttl": "P30D",
+      "license": "official-record",
+      "category": "registry",
+      "status": "active"
+    },
+    {
+      "slug": "registry-jp-nta",
+      "did": "did:web:maps.etzhayyim.com:registry:jp-nta",
+      "displayName": "Japan NTA 法人番号",
+      "externalSource": "National Tax Agency Corporate Number",
+      "ttl": "P1D",
+      "license": "public-domain",
+      "category": "registry",
+      "status": "active",
+      "notes": "~6M corporations, P0 coverage target."
+    },
+    {
+      "slug": "registry-uk-ch",
+      "did": "did:web:maps.etzhayyim.com:registry:uk-ch",
+      "displayName": "UK Companies House",
+      "externalSource": "UK Companies House API",
+      "ttl": "P7D",
+      "license": "CC-BY-4.0",
+      "category": "registry",
+      "status": "active"
+    },
+    {
+      "slug": "registry-us-edgar",
+      "did": "did:web:maps.etzhayyim.com:registry:us-edgar",
+      "displayName": "US SEC EDGAR",
+      "externalSource": "EDGAR Full-Text Search + filings",
+      "ttl": "P7D",
+      "license": "public-domain",
+      "category": "registry",
+      "status": "active"
+    },
+    {
+      "slug": "registry-eu-br",
+      "did": "did:web:maps.etzhayyim.com:registry:eu-br",
+      "displayName": "EU Business Registries",
+      "externalSource": "EU BRIS (Business Registers Interconnection System)",
+      "ttl": "P30D",
+      "license": "official-record",
+      "category": "registry",
+      "status": "active"
+    },
+    {
+      "slug": "registry-openaddresses",
+      "did": "did:web:maps.etzhayyim.com:registry:openaddresses",
+      "displayName": "OpenAddresses global address dataset",
+      "externalSource": "OpenAddresses",
+      "ttl": "P30D",
+      "license": "varies-by-source",
+      "category": "registry",
+      "status": "active",
+      "notes": "~1B addresses, P1 coverage target."
+    }
+  ]
+}

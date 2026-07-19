@@ -1,0 +1,38 @@
+{
+  "name": "kotodama-t1l3srv0",
+  "main": "svelte/.svelte-kit/cloudflare/_worker.js",
+  "compatibility_date": "2025-03-17",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "nodejs_als"
+  ],
+  "vars": {
+    "APP_CAPABILITIES": "[\"mvt-tile-serving\",\"pmtiles\",\"openmaptiles\"]",
+    "APP_DESCRIPTION": "Edge-only SvelteKit BFF for map tile requests. Tile storage and generation run behind the agentgateway MCP router.",
+    "APP_DISPLAY_NAME": "Maps Tile Server",
+    "APP_FRAMEWORK": "sveltekit-edge-bff",
+    "APP_NANOID": "t1l3srv0",
+    "APP_PERFORMER_TYPE": "service",
+    "APP_UI_TYPE": "none",
+    "TILE_MANIFEST_KEY": "manifest:v1",
+    "TILE_MANIFEST_TTL_SECONDS": "60",
+    "TILE_ATTRIBUTION": "OpenStreetMap contributors (ODbL) - tiles by etzhayyim.com",
+    "AGENTGATEWAY_MCP_ROUTER_URL": "https://mcp.etzhayyim.com/xrpc/com.etzhayyim.mcp.message"
+  },
+  "routes": [
+    {
+      "pattern": "tiles-maps.etzhayyim.com/*",
+      "zone_name": "etzhayyim.com"
+    },
+    {
+      "pattern": "t1l3srv0.etzhayyim.com/*",
+      "zone_name": "etzhayyim.com"
+    }
+  ],
+  "assets": {
+    "directory": "./svelte/.svelte-kit/cloudflare/client",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  }
+}

@@ -1,0 +1,36 @@
+# maps Gsplat (3D Gaussian Splatting) RunPod Serverless endpoint —
+# Phase 2 (real Mapillary → COLMAP → gsplat trainer). ADR-2605092800.
+#
+# Build:
+#   docker build --platform linux/amd64 -f Dockerfile.phase2 \
+#     -t ghcr.io/etzhayyimcojp/maps-runpod-gsplat:phase2-$(date -u +%Y%m%d%H%M%S) .
+#
+# Recommended GPU: L40S 48 GiB. Container Disk: 30 GB (gsplat
+# intermediates + COLMAP database + downloaded Mapillary JPEGs).
+# Idle Timeout: 30 s. Workers Min=0 Max=2.
+
+FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+
+WORKDIR /app
+
+# COLMAP (CUDA build) + minimal X11/GL libs pycolmap loads at import.
+# `--no-install-recommends` keeps the image around 5 GB on top of the
+# pytorch base.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        colmap \
+        libgl1 \
+        libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt requirements-phase2.txt ./
+RUN pip install --no-cache-dir -r requirements.txt \
+ && pip install --no-cache-dir -r requirements-phase2.txt
+
+COPY handler.py .
+
+# Phase 2 active. Operator can still flip this back to 1 in the
+# RunPod template Environment Variables panel for a quick sanity
+# check (the stub responds in ~1 s and confirms the wire is up).
+ENV RUNPOD_PHASE=2
+
+CMD ["python", "-u", "handler.py"]

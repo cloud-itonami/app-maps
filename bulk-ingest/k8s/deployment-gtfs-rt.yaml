@@ -1,0 +1,91 @@
+# no-server-key: read-only — pending Stage A-E member-signed-writes refactor per ADR-2605231525
+# maps-bulk-ingest-gtfs-rt — long-running RT pod (Phase 3, gated).
+#
+# This Deployment is GATED: the worker process raises and the pod
+# CrashLoopBackOff's unless GTFS_RT_FEED_INDEX_URL or ODPT_API_KEY is set.
+# Apply this manifest before the gate is configured and you will see
+# "back-off restarting failed container" — that is the design contract.
+#
+# To enable:
+#   ODPT-only:
+#     kubectl -n maps-bulk-ingest set env deploy/bulk-ingest-gtfs-rt \
+#       ODPT_API_KEY=$(security find-generic-password -s etzhayyim.transit -a ODPT_API_KEY -w)
+#   No-auth feeds only:
+#     kubectl -n maps-bulk-ingest set env deploy/bulk-ingest-gtfs-rt \
+#       GTFS_RT_FEED_INDEX_URL=https://etzhayyim-nats.s3.us-west-004.backblazeb2.com/maps-bulk-ingest/gtfs-rt/index.json
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bulk-ingest-gtfs-rt
+  namespace: maps-bulk-ingest
+  labels:
+    app.kubernetes.io/name: bulk-ingest-gtfs-rt
+    app.kubernetes.io/part-of: maps
+spec:
+  # Default replicas=0 — manually scale up after configuring auth.
+  # `kubectl scale deploy/bulk-ingest-gtfs-rt --replicas=1`
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bulk-ingest-gtfs-rt
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bulk-ingest-gtfs-rt
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+
+      tolerations:
+        - key: "workload"
+          operator: "Equal"
+          value: "osm-ingest"
+          effect: "NoSchedule"
+      containers:
+        - name: dumper
+          image: ghcr.io/etzhayyim/maps-bulk-ingest:1.2.0
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/app/workers/gtfs_rt_dumper.py"]
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - secretRef:
+                name: maps-bulk-ingest-credentials
+          env:
+            - name: VP_INTERVAL_S
+              value: "30"
+            - name: TU_INTERVAL_S
+              value: "60"
+            - name: ALERT_INTERVAL_S
+              value: "300"
+            - name: ODPT_OPERATORS
+              value: "TokyoMetro,JR-East,Toei"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bulk-ingest-gtfs-rt
+  namespace: maps-bulk-ingest
+spec:
+  selector:
+    app.kubernetes.io/name: bulk-ingest-gtfs-rt
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http

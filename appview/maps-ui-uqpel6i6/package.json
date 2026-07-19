@@ -1,0 +1,16 @@
+{
+  "name": "maps-ui-uqpel6i6",
+  "version": "1.0.0",
+  "description": "maps.etzhayyim.com Spatial Intelligence + Digital Twin",
+  "main": "svelte/.svelte-kit/cloudflare/_worker.js",
+  "type": "module",
+  "dependencies": {
+    "h3-js": "^4.4.0"
+  },
+  "scripts": {
+    "dev": "pnpm --dir svelte dev",
+    "build": "pnpm --dir svelte build",
+    "preview": "pnpm --dir svelte preview",
+    "check": "pnpm --dir svelte check"
+  }
+}

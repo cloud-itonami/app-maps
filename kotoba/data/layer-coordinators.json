@@ -1,0 +1,16 @@
+{
+  "_comment": "11 KAMI visual layer coordinators per maps CLAUDE.md §Layer 1.",
+  "coordinators": [
+    { "slug": "tile",       "displayName": "Tile (base raster + vector overlay)",   "description": "Base map raster + vector overlay routing for KAMI." },
+    { "slug": "poi",        "displayName": "POI (points of interest)",              "description": "Place / spot rendering." },
+    { "slug": "route",      "displayName": "Route (path geometry)",                 "description": "Road / railway / sea / air / bus / ferry path geometry." },
+    { "slug": "infra",      "displayName": "Infrastructure (utilities)",            "description": "Water / sewage / gas / electric / telecom / district heating cross-section." },
+    { "slug": "building",   "displayName": "Building (3D extrusion)",               "description": "viewport diagonal < 500 km Building / Mountain / Port / Airport / Station extrusion." },
+    { "slug": "weather",    "displayName": "Weather (observation + forecast)",       "description": "Weather point overlay, TTL 1h." },
+    { "slug": "sensor",     "displayName": "Sensor (live readings)",                "description": "Sensor reading stream + alert overlay." },
+    { "slug": "transport",  "displayName": "Transport (transit feed)",              "description": "GTFS static + GTFS-RT vehicle position / trip update / service alerts." },
+    { "slug": "geography",  "displayName": "Geography (natural features)",          "description": "Spot / river / lake / coastline / mountain / maritime zone." },
+    { "slug": "satellite",  "displayName": "Satellite (multi-sensor imagery)",      "description": "Sentinel-2 / Landsat / Sentinel-1 / HLS / Copernicus DEM / NAIP." },
+    { "slug": "event",      "displayName": "Event (spatial events)",                "description": "SpatialEvent stream — seismic, ADS-B, custom user events." }
+  ]
+}

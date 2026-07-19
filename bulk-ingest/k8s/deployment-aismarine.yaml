@@ -1,0 +1,108 @@
+# maps-bulk-ingest-aismarine — long-running aisstream.io WebSocket consumer.
+#
+# ADR-2605011500. MarineTraffic-equivalent vessel tracking. The Worker
+# subscribes globally (no BoundingBoxes filter) to wss://stream.aisstream.io,
+# batches positions (5s OR 500 msg) and flushes them through the K8s-internal
+# bpmn-dispatcher ClusterIP (ADR-2604282300 §Addendum 2026-04-30) to:
+#
+#   com.etzhayyim.apps.maps.aismarine.position.batchInsert
+#   com.etzhayyim.apps.maps.aismarine.master.upsert
+#
+# Gate: pod CrashLoopBackOff's unless both
+#   AIS_STREAM_API_KEY        (Keychain `etzhayyim.comsstream/API_KEY`)
+#   AISMARINE_INTERNAL_SECRET (K8s Secret `bpmn-dispatcher-auth/internal-secret`)
+# are present.
+#
+# To enable:
+#   security add-generic-password -s etzhayyim.comsstream -a API_KEY -w '<key>' -U
+#   kubectl -n maps-bulk-ingest create secret generic aismarine-credentials \
+#     --from-literal=AIS_STREAM_API_KEY="$(security find-generic-password -s etzhayyim.comsstream -a API_KEY -w)"
+#   kubectl -n maps-bulk-ingest scale deploy/bulk-ingest-aismarine --replicas=1
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bulk-ingest-aismarine
+  namespace: maps-bulk-ingest
+  labels:
+    app.kubernetes.io/name: bulk-ingest-aismarine
+    app.kubernetes.io/part-of: maps
+spec:
+  # Default replicas=0 — manually scale up after configuring API key.
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bulk-ingest-aismarine
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bulk-ingest-aismarine
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+
+      tolerations:
+        - key: "workload"
+          operator: "Equal"
+          value: "osm-ingest"
+          effect: "NoSchedule"
+      containers:
+        - name: consumer
+          image: ghcr.io/etzhayyim/maps-bulk-ingest:1.3.2
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/app/workers/aismarine_consumer.py"]
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - secretRef:
+                name: aismarine-credentials
+            - secretRef:
+                name: maps-bulk-ingest-credentials
+          env:
+            - name: AISMARINE_BATCH_MAX_AGE_S
+              value: "5"
+            - name: AISMARINE_BATCH_MAX_MSGS
+              value: "500"
+            - name: AISMARINE_DML_RATE_LIMIT
+              value: "5000"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bulk-ingest-aismarine
+  namespace: maps-bulk-ingest
+  labels:
+    app.kubernetes.io/name: bulk-ingest-aismarine
+    app.kubernetes.io/part-of: maps
+spec:
+  selector:
+    app.kubernetes.io/name: bulk-ingest-aismarine
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  clusterIP: None

@@ -1,0 +1,41 @@
+{
+  "_comment": "34 natural zones per maps CLAUDE.md §Layer 3 — Köppen climate primary (5) + WWF biome (14) + major tectonic plate (15).",
+  "zones": [
+    { "slug": "koppen-a", "kind": "koppen", "code": "A", "name": "Tropical climates",     "description": "Köppen A — all months mean temperature ≥ 18 °C." },
+    { "slug": "koppen-b", "kind": "koppen", "code": "B", "name": "Arid climates",         "description": "Köppen B — evaporation exceeds precipitation." },
+    { "slug": "koppen-c", "kind": "koppen", "code": "C", "name": "Temperate climates",    "description": "Köppen C — coldest-month mean −3 to 18 °C." },
+    { "slug": "koppen-d", "kind": "koppen", "code": "D", "name": "Continental climates",  "description": "Köppen D — coldest-month mean < −3 °C." },
+    { "slug": "koppen-e", "kind": "koppen", "code": "E", "name": "Polar climates",        "description": "Köppen E — warmest-month mean < 10 °C." },
+
+    { "slug": "biome-tropical-broadleaf",          "kind": "biome", "code": "1",  "name": "Tropical & subtropical moist broadleaf forests" },
+    { "slug": "biome-tropical-dry-broadleaf",      "kind": "biome", "code": "2",  "name": "Tropical & subtropical dry broadleaf forests" },
+    { "slug": "biome-tropical-coniferous",         "kind": "biome", "code": "3",  "name": "Tropical & subtropical coniferous forests" },
+    { "slug": "biome-temperate-broadleaf",         "kind": "biome", "code": "4",  "name": "Temperate broadleaf & mixed forests" },
+    { "slug": "biome-temperate-coniferous",        "kind": "biome", "code": "5",  "name": "Temperate coniferous forests" },
+    { "slug": "biome-boreal",                      "kind": "biome", "code": "6",  "name": "Boreal forests / taiga" },
+    { "slug": "biome-tropical-grasslands",         "kind": "biome", "code": "7",  "name": "Tropical & subtropical grasslands, savannas & shrublands" },
+    { "slug": "biome-temperate-grasslands",        "kind": "biome", "code": "8",  "name": "Temperate grasslands, savannas & shrublands" },
+    { "slug": "biome-flooded-grasslands",          "kind": "biome", "code": "9",  "name": "Flooded grasslands & savannas" },
+    { "slug": "biome-montane-grasslands",          "kind": "biome", "code": "10", "name": "Montane grasslands & shrublands" },
+    { "slug": "biome-tundra",                      "kind": "biome", "code": "11", "name": "Tundra" },
+    { "slug": "biome-mediterranean",               "kind": "biome", "code": "12", "name": "Mediterranean forests, woodlands & scrub" },
+    { "slug": "biome-deserts",                     "kind": "biome", "code": "13", "name": "Deserts & xeric shrublands" },
+    { "slug": "biome-mangroves",                   "kind": "biome", "code": "14", "name": "Mangroves" },
+
+    { "slug": "tectonic-african",   "kind": "tectonic", "code": "AF", "name": "African Plate" },
+    { "slug": "tectonic-antarctic", "kind": "tectonic", "code": "AN", "name": "Antarctic Plate" },
+    { "slug": "tectonic-arabian",   "kind": "tectonic", "code": "AR", "name": "Arabian Plate" },
+    { "slug": "tectonic-australian","kind": "tectonic", "code": "AU", "name": "Australian Plate" },
+    { "slug": "tectonic-caribbean", "kind": "tectonic", "code": "CA", "name": "Caribbean Plate" },
+    { "slug": "tectonic-cocos",     "kind": "tectonic", "code": "CO", "name": "Cocos Plate" },
+    { "slug": "tectonic-eurasian",  "kind": "tectonic", "code": "EU", "name": "Eurasian Plate" },
+    { "slug": "tectonic-indian",    "kind": "tectonic", "code": "IN", "name": "Indian Plate" },
+    { "slug": "tectonic-juan-de-fuca","kind": "tectonic", "code": "JF", "name": "Juan de Fuca Plate" },
+    { "slug": "tectonic-nazca",     "kind": "tectonic", "code": "NZ", "name": "Nazca Plate" },
+    { "slug": "tectonic-north-american","kind": "tectonic", "code": "NA", "name": "North American Plate" },
+    { "slug": "tectonic-pacific",   "kind": "tectonic", "code": "PA", "name": "Pacific Plate" },
+    { "slug": "tectonic-philippine","kind": "tectonic", "code": "PH", "name": "Philippine Sea Plate" },
+    { "slug": "tectonic-scotia",    "kind": "tectonic", "code": "SC", "name": "Scotia Plate" },
+    { "slug": "tectonic-south-american","kind": "tectonic", "code": "SA", "name": "South American Plate" }
+  ]
+}

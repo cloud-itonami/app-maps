@@ -1,0 +1,288 @@
+{
+  "@context": "https://schema.org/",
+  "@type": "Project",
+  "name": "Spatial Intelligence Platform (etzhayyim-project-maps)",
+  "status": "In Progress",
+  "identifier": "etzhayyim-project-maps",
+  "description": "A spatial intelligence platform for AI agents (cross-actor) to perceive, plan, and act in physical and digital spaces using S2, H3, and MGRS standards.",
+  "hasPart": [
+    {
+      "@type": "CreativeWork",
+      "name": "Strategy",
+      "url": "STRATEGY.jsonld"
+    },
+    {
+      "@type": "CreativeWork",
+      "name": "Capabilities",
+      "url": "capabilities.jsonld"
+    },
+    {
+      "@type": "CreativeWork",
+      "name": "Activities",
+      "url": "activities.jsonld"
+    },
+    {
+      "@type": "CreativeWork",
+      "name": "Architecture",
+      "url": "ARCHITECTURE.jsonld"
+    },
+    {
+      "@type": "WebApplication",
+      "name": "maps.etzhayyim.com Portal",
+      "url": "ui/"
+    }
+  ],
+  "tasks": [
+    {
+      "status": "in_progress",
+      "task": "Define Spatial Intelligence business model and strategic roadmap."
+    },
+    {
+      "status": "pending",
+      "task": "Design Proto schemas for spatial services (S2, H3, MGRS)."
+    },
+    {
+      "status": "completed",
+      "task": "Initialize maps.etzhayyim.com UI with Svelte 5 and MapLibre."
+    },
+    {
+      "status": "pending",
+      "task": "Implement Temporal workflows for tactical pathfinding."
+    },
+    {
+      "status": "in_progress",
+      "task": "Deploy maps.etzhayyim.com to Kubernetes with GitOps."
+    },
+    {
+      "status": "in_progress",
+      "task": "Implement maps collection control-plane MCP component for source/job orchestration."
+    }
+  ],
+  "performers": [
+    {
+      "@type": "Service",
+      "name": "Spatial Logic Actor",
+      "identifier": "etzhayyim-performer-sys-etzhayyim-actors-pba7d22f-svc-spatial-logic",
+      "description": "Handles S2 logic, geofencing, and hierarchical spatial management."
+    },
+    {
+      "@type": "Service",
+      "name": "Tactical Movement Actor",
+      "identifier": "etzhayyim-performer-sys-etzhayyim-actors-pba7d22f-svc-tactical-movement",
+      "description": "Handles H3-based pathfinding and movement cost calculations."
+    },
+    {
+      "@type": "Service",
+      "name": "Military Interop Actor",
+      "identifier": "etzhayyim-performer-sys-etzhayyim-actors-pba7d22f-svc-military-interop",
+      "description": "Handles MGRS conversion and NATO standards compatibility."
+    },
+    {
+      "@type": "Service",
+      "name": "Maps Collection Control Plane",
+      "identifier": "maps-collection-control-plane-v1m9k2q8",
+      "description": "MCP control plane for registering data sources and orchestrating collection jobs."
+    }
+  ],
+  "rdfUnifiedDocuments": {
+    "@type": "Dataset",
+    "name": "Unified top-level RDF/JSON-LD documents",
+    "description": "Consolidated from project top-level *.jsonld files except PROJECT.jsonld.",
+    "documents": [
+      {
+        "fileName": "ARCHITECTURE.jsonld",
+        "content": {
+          "@context": "https://schema.org/",
+          "@type": "CreativeWork",
+          "name": "Architecture for Spatial Intelligence Platform",
+          "description": "Technical architecture for maps.etzhayyim.com.",
+          "hasPart": [
+            {
+              "@type": "SoftwareApplication",
+              "name": "Spatial Core (Go)",
+              "description": "ConnectRPC services using s2geometry and h3-go."
+            },
+            {
+              "@type": "SoftwareApplication",
+              "name": "Tactical UI (Svelte 5)",
+              "description": "MapLibre GL JS + deck.gl for high-performance spatial monitoring."
+            },
+            {
+              "@type": "SoftwareApplication",
+              "name": "Workflow Engine (Temporal)",
+              "description": "Managing long-running spatial tasks and multi-agent coordination."
+            }
+          ],
+          "interoperability": [
+            "S2 (Google)",
+            "H3 (Uber)",
+            "MGRS (NATO/US Military)",
+            "ConnectRPC (v2)",
+            "MCP (Model Context Protocol)"
+          ]
+        }
+      },
+      {
+        "fileName": "STRATEGY.jsonld",
+        "content": {
+          "@context": "https://schema.org/",
+          "@type": "CreativeWork",
+          "name": "Strategy for Spatial Intelligence Platform",
+          "description": "Strategic roadmap for maps.etzhayyim.com, focusing on AI-agent (cross-actor) spatial awareness and military-grade interoperability.",
+          "about": [
+            {
+              "@type": "Thing",
+              "name": "Phase 1: Foundation",
+              "description": "Establish S2/H3/MGRS core libraries and ConnectRPC schemas."
+            },
+            {
+              "@type": "Thing",
+              "name": "Phase 2: Visualization",
+              "description": "Launch maps.etzhayyim.com UI with Svelte 5 and deck.gl for tactical monitoring."
+            },
+            {
+              "@type": "Thing",
+              "name": "Phase 3: Autonomy",
+              "description": "Integrate Temporal workflows for multi-agent coordinated movement and tactical planning."
+            }
+          ],
+          "keywords": [
+            "S2",
+            "H3",
+            "MGRS",
+            "Spatial Intelligence",
+            "conversation",
+            "Temporal",
+            "ConnectRPC"
+          ]
+        }
+      },
+      {
+        "fileName": "activities.jsonld",
+        "content": {
+          "@context": "https://schema.org/",
+          "@type": "CreativeWork",
+          "name": "Operational Activities (OV-5b) for Spatial Intelligence",
+          "description": "Activity hierarchy for maps.etzhayyim.com spatial operations.",
+          "hasPart": [
+            {
+              "@type": "Action",
+              "name": "Observe Area",
+              "identifier": "OA-1",
+              "description": "Continuous monitoring of performers and resources within a defined S2/H3 area."
+            },
+            {
+              "@type": "Action",
+              "name": "Plan Route",
+              "identifier": "OA-2",
+              "description": "Calculating tactical movement paths using H3 cost grids and temporal workflows."
+            },
+            {
+              "@type": "Action",
+              "name": "Convert Coordinates",
+              "identifier": "OA-3",
+              "description": "Translating between S2, H3, MGRS, and WGS84 coordinate systems."
+            },
+            {
+              "@type": "Action",
+              "name": "Manage Geofence",
+              "identifier": "OA-4",
+              "description": "Defining and monitoring logical boundaries (S2) for access control."
+            }
+          ]
+        }
+      },
+      {
+        "fileName": "capabilities.jsonld",
+        "content": {
+          "@context": "https://schema.org/",
+          "@type": "CreativeWork",
+          "name": "Capabilities for Spatial Intelligence Platform",
+          "description": "Defines the tactical capabilities of maps.etzhayyim.com, traced to activities and performers.",
+          "hasPart": [
+            {
+              "@type": "Capability",
+              "name": "Spatial Awareness",
+              "description": "Ability to perceive and categorize space using hierarchical grids.",
+              "tracedTo": [
+                "Operational Activity: Observe Area"
+              ]
+            },
+            {
+              "@type": "Capability",
+              "name": "Tactical Planning",
+              "description": "Ability to calculate optimal routes based on movement cost and constraints.",
+              "tracedTo": [
+                "Operational Activity: Plan Route"
+              ]
+            },
+            {
+              "@type": "Capability",
+              "name": "Military Interoperability",
+              "description": "Ability to communicate spatial data using MGRS and NATO standards.",
+              "tracedTo": [
+                "Operational Activity: Convert Coordinates"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "fileName": "scheduler.jsonld",
+        "content": {
+          "@context": [
+            "https://schema.org/",
+            {
+              "etzhayyim": "https://etzhayyim.com/schemas/",
+              "capabilities": "etzhayyim:capabilities",
+              "survivalIndicators": "etzhayyim:survivalIndicators",
+              "scheduler": "etzhayyim:scheduler",
+              "milestones": "etzhayyim:milestones",
+              "blockers": "etzhayyim:blockers",
+              "dependsOn": {
+                "@id": "etzhayyim:dependsOn",
+                "@type": "@id"
+              },
+              "ingestKey": "etzhayyim:ingestKey",
+              "window": "etzhayyim:window",
+              "valueUpdatedAt": "etzhayyim:valueUpdatedAt"
+            }
+          ],
+          "@type": "CreativeWork",
+          "name": "Spatial Intelligence Platform (etzhayyim-project-maps) Scheduler",
+          "identifier": "etzhayyim-project-maps/scheduler",
+          "description": "Project schedule (milestones) and blockers.",
+          "dateCreated": "2026-02-15T04:25:26+00:00",
+          "milestones": [
+            {
+              "@type": "CreativeWork",
+              "name": "Define Spatial Intelligence business model and strategic roadmap.",
+              "status": "Planned",
+              "dueDate": "2026-02-22"
+            },
+            {
+              "@type": "CreativeWork",
+              "name": "Design Proto schemas for spatial services (S2, H3, MGRS).",
+              "status": "Planned",
+              "dueDate": "2026-03-01"
+            },
+            {
+              "@type": "CreativeWork",
+              "name": "Implement Temporal workflows for tactical pathfinding.",
+              "status": "Planned",
+              "dueDate": "2026-03-08"
+            },
+            {
+              "@type": "CreativeWork",
+              "name": "Deploy maps.etzhayyim.com to Kubernetes with GitOps.",
+              "status": "Planned",
+              "dueDate": "2026-03-15"
+            }
+          ],
+          "blockers": [],
+          "dateModified": "2026-02-15T14:05:52Z"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,85 @@
+# maps-bulk-ingest-overture-maps — resident worker pod
+#
+# Streams Overture Maps GeoParquet from S3 to RisingWave and B2.
+# Extremely lightweight compared to osm-planet.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bulk-ingest-overture-maps
+  namespace: maps-bulk-ingest
+  labels:
+    app.kubernetes.io/name: bulk-ingest-overture-maps
+    app.kubernetes.io/part-of: maps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bulk-ingest-overture-maps
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bulk-ingest-overture-maps
+    spec:
+      tolerations:
+        - key: "workload"
+          operator: "Equal"
+          value: "osm-ingest"
+          effect: "NoSchedule"
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: dumper
+          image: ghcr.io/etzhayyim/maps-bulk-ingest:1.0.0
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/app/workers/overture_maps_dumper.py"]
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - secretRef:
+                name: maps-bulk-ingest-credentials
+          env:
+            - name: B2_BUCKET
+              value: etzhayyim-nats
+            - name: B2_PREFIX
+              value: maps-bulk-ingest/overture-maps
+            - name: OVERTURE_THEMES
+              value: "places,buildings"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2
+              memory: 4Gi
+          livenessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: script-volume
+              mountPath: /app/workers/overture_maps_dumper.py
+              subPath: overture_maps_dumper.py
+      volumes:
+        - name: script-volume
+          configMap:
+            name: overture-maps-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bulk-ingest-overture-maps
+  namespace: maps-bulk-ingest
+spec:
+  selector:
+    app.kubernetes.io/name: bulk-ingest-overture-maps
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http

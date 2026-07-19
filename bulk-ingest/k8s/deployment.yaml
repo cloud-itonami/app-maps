@@ -1,0 +1,109 @@
+# no-server-key: read-only — pending Stage A-E member-signed-writes refactor per ADR-2605231525
+# maps-bulk-ingest-wikidata — resident worker pod
+#
+# Long-running daemon that holds open TCP listener on :8080. POST /trigger
+# starts a download+parse+COPY pass. GET /status returns current job state.
+# BPMN process `mapsBulkRefreshWikidata` (R/PT24H) calls /trigger nightly.
+#
+# Resource sizing: Wikidata `latest-all.json.gz` is 100GB compressed,
+# 1.4TB uncompressed. We stream-decompress (gzip line-by-line) so peak
+# memory stays low; 16Gi gives headroom for parquet shard buffers
+# (100k rows × ~200B = ~20MB per shard) and psycopg2 batch inserts.
+# CPU is mostly waiting on network + json.loads — 4 vCPU is plenty.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: maps-bulk-ingest
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: maps-bulk-ingest-credentials
+  namespace: maps-bulk-ingest
+type: Opaque
+stringData:
+  # Source these from etzhayyim vault before apply — values below are EXAMPLE placeholder:
+  #   etzhayyim vault get maps-bulk-ingest DATABASE_URL B2_ACCESS_KEY_ID B2_SECRET_ACCESS_KEY
+  DATABASE_URL: "postgres://root:CHANGEME@45.32.79.245:4566/dev"  # EXAMPLE placeholder
+  B2_ACCESS_KEY_ID: "CHANGEME"  # EXAMPLE placeholder
+  B2_SECRET_ACCESS_KEY: "CHANGEME"  # EXAMPLE placeholder
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bulk-ingest-wikidata
+  namespace: maps-bulk-ingest
+  labels:
+    app.kubernetes.io/name: bulk-ingest-wikidata
+    app.kubernetes.io/part-of: maps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # don't run two dumps at once
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bulk-ingest-wikidata
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bulk-ingest-wikidata
+    spec:
+
+      tolerations:
+        - key: "workload"
+          operator: "Equal"
+          value: "osm-ingest"
+          effect: "NoSchedule"
+
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: dumper
+          image: ghcr.io/etzhayyim/maps-bulk-ingest:1.0.0
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/app/workers/wikidata_dumper.py"]
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - secretRef:
+                name: maps-bulk-ingest-credentials
+          env:
+            - name: B2_BUCKET
+              value: etzhayyim-nats
+            - name: B2_PREFIX
+              value: maps-bulk-ingest/wikidata
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+              ephemeral-storage: 50Gi
+            limits:
+              cpu: 2
+              memory: 4Gi
+              ephemeral-storage: 100Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bulk-ingest-wikidata
+  namespace: maps-bulk-ingest
+spec:
+  selector:
+    app.kubernetes.io/name: bulk-ingest-wikidata
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http

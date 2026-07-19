@@ -1,0 +1,223 @@
+{
+  "@context": "https://etzhayyim.com/ns/kotodama/v1",
+  "@id": "did:web:maps.etzhayyim.com",
+  "accent": "#3b82f6",
+  "component": {
+    "env": {
+      "MAPILLARY_ACCESS_TOKEN": "MLY|26139125922375659|e2107f0197fd28f88486e4bac27b3c9f"
+    },
+    "path": "/wasm/component.wasm"
+  },
+  "convoSystemPrompt": "You are Maps, the spatial intelligence agent for etzhayyim.com. Graph-first architecture with 980 Multi-DIDs, 137 XRPC commands across 14 WIT domains. You can look up places, calculate routes, check weather, query infrastructure networks, manage digital twins, run simulations, and maintain Bayesian latent world-model beliefs over spatial entities. You monitor real-time seismic events (USGS), aircraft positions (OpenSky ADS-B), and public transit (GTFS-JP). You extract geolocation from user post images (EXIF), ingest POIs from Mapraly, analyze images via Murakumo Vision, and process satellite imagery (Sentinel-2, Landsat). You manage 50+ geo crawl domains via site.etzhayyim.com for web-sourced geographic entity extraction. 14 source DIDs, 32 geographic code schemes, 12 Overpass entity types for JP-wide coverage. Use your tools to provide accurate, real-time spatial intelligence.",
+  "deploy": {},
+  "duties": [
+    "勤労の義務"
+  ],
+  "embedUrl": "https://uqpel6i6.etzhayyim.com/?embed=1",
+  "governance": {
+    "clearance": "public",
+    "disclosureTier": "T0",
+    "requiredRoles": [
+      "subscriber"
+    ],
+    "requiredTrustLevel": "low",
+    "sensitivity": "public"
+  },
+  "icon": "🗺️",
+  "kpi": [
+    "credits の獲得"
+  ],
+  "name": "maps-ui",
+  "nanoid": "uqpel6i6",
+  "performerType": "system",
+  "profile": {
+    "agentType": "autonomous",
+    "capabilities": [
+      "spatial-intelligence",
+      "digital-twin",
+      "geocoding",
+      "bayesian-latent-world-model"
+    ],
+    "description": "Spatial intelligence + Digital Twin + Bayesian latent world model — places, routes, weather, infrastructure, buildings, sensors, simulation",
+    "displayName": "Maps",
+    "isBot": true,
+    "operator": "etzhayyim.co.jp"
+  },
+  "project": "maps",
+  "routes": [
+    {
+      "host": "maps.etzhayyim.com",
+      "paths": [
+        "/"
+      ],
+      "tls": true
+    },
+    {
+      "host": "uqpel6i6.etzhayyim.com",
+      "paths": [
+        "/"
+      ],
+      "tls": true
+    }
+  ],
+  "runtimeType": "worker",
+  "space": {
+    "channels": [
+      {
+        "default": true,
+        "description": "Route saves, place discoveries, weather updates",
+        "kind": "public",
+        "name": "maps-feed"
+      }
+    ],
+    "description": "Spatial intelligence — places, routes, weather, geolocation",
+    "historyVisibility": "world-readable",
+    "joinRule": "public",
+    "name": "Maps"
+  },
+  "triggers": {
+    "http": {
+      "listen": "0.0.0.0:8080",
+      "spa": true,
+      "staticDir": "/wasm/static"
+    },
+    "subscribeRepos": {
+      "collections": [
+        "app.bsky.feed.like",
+        "app.bsky.feed.post",
+        "app.bsky.feed.repost",
+        "app.bsky.graph.follow",
+        "com.etzhayyim.apps.ipaddress.ipGeo",
+        "com.etzhayyim.apps.maps.dataset",
+        "com.etzhayyim.apps.maps.layer",
+        "com.etzhayyim.apps.maps.place",
+        "com.etzhayyim.apps.maps.route",
+        "com.etzhayyim.apps.maps.weatherPoint",
+        "com.etzhayyim.apps.maps.infraNetwork",
+        "com.etzhayyim.apps.maps.infraSegment",
+        "com.etzhayyim.apps.maps.infraNode",
+        "com.etzhayyim.apps.maps.infraIncident",
+        "com.etzhayyim.apps.maps.building",
+        "com.etzhayyim.apps.maps.buildingFloor",
+        "com.etzhayyim.apps.maps.terrainPatch",
+        "com.etzhayyim.apps.maps.asset",
+        "com.etzhayyim.apps.maps.assetModel",
+        "com.etzhayyim.apps.maps.twinState",
+        "com.etzhayyim.apps.maps.deviceBinding",
+        "com.etzhayyim.apps.maps.occupancy",
+        "com.etzhayyim.apps.maps.sensor",
+        "com.etzhayyim.apps.maps.sensorReading",
+        "com.etzhayyim.apps.maps.sensorAlert",
+        "com.etzhayyim.apps.maps.healthAssessment",
+        "com.etzhayyim.apps.maps.maintenancePlan",
+        "com.etzhayyim.apps.maps.simulation",
+        "com.etzhayyim.apps.maps.simulationResult",
+        "com.etzhayyim.apps.maps.forecast",
+        "com.etzhayyim.apps.maps.anomalyEvent",
+        "com.etzhayyim.apps.maps.road",
+        "com.etzhayyim.apps.maps.railway",
+        "com.etzhayyim.apps.maps.seaRoute",
+        "com.etzhayyim.apps.maps.airRoute",
+        "com.etzhayyim.apps.maps.busRoute",
+        "com.etzhayyim.apps.maps.waterway",
+        "com.etzhayyim.apps.maps.port",
+        "com.etzhayyim.apps.maps.airport",
+        "com.etzhayyim.apps.maps.station",
+        "com.etzhayyim.apps.maps.busStop",
+        "com.etzhayyim.apps.maps.parking",
+        "com.etzhayyim.apps.maps.evCharger",
+        "com.etzhayyim.apps.maps.spot",
+        "com.etzhayyim.apps.maps.river",
+        "com.etzhayyim.apps.maps.lake",
+        "com.etzhayyim.apps.maps.coastline",
+        "com.etzhayyim.apps.maps.mountain",
+        "com.etzhayyim.apps.maps.maritimeZone",
+        "com.etzhayyim.apps.maps.adminArea",
+        "com.etzhayyim.apps.maps.spatialEvent",
+        "com.etzhayyim.apps.maps.spatialVersion",
+        "com.etzhayyim.apps.maps.spatialRelation",
+        "com.etzhayyim.apps.maps.displayLayer",
+        "com.etzhayyim.apps.maps.visionResult",
+        "com.etzhayyim.apps.maps.collectionJob",
+        "com.etzhayyim.apps.maps.satelliteScene",
+        "com.etzhayyim.apps.maps.layerCoordinator",
+        "com.etzhayyim.apps.maps.geoAlias",
+        "com.etzhayyim.apps.maps.verticalZone",
+        "com.etzhayyim.apps.maps.naturalZone",
+        "com.etzhayyim.apps.maps.webCrawlGeoEntity",
+        "com.etzhayyim.apps.maps.satelliteAnalysisResult",
+        "com.etzhayyim.apps.maps.legalEntity",
+        "com.etzhayyim.apps.maps.operator",
+        "com.etzhayyim.apps.maps.propertyOwner",
+        "com.etzhayyim.apps.maps.landRegistry",
+        "com.etzhayyim.apps.maps.propertyRegistry",
+        "com.etzhayyim.apps.maps.businessRegistry",
+        "com.etzhayyim.apps.maps.constructionPermit",
+        "com.etzhayyim.apps.maps.operatingLicense",
+        "com.etzhayyim.apps.maps.zoningRecord",
+        "com.etzhayyim.apps.maps.ownership",
+        "com.etzhayyim.apps.site.wet",
+        "com.etzhayyim.apps.site.wat",
+        "com.etzhayyim.apps.site.geoRecord"
+      ]
+    }
+  },
+  "derive": {
+    "social": [
+      {
+        "on": "com.etzhayyim.apps.maps.layerCoordinator",
+        "template": "[Layer] {{displayName}} coordinator registered ({{layerSlug}})\ncc @jinushi.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.adminArea",
+        "template": "[Region] {{displayName}} (L{{adminLevel}}) registered\ncc @jinushi.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.verticalZone",
+        "template": "[VerticalZone] {{displayName}} ({{zoneType}}: {{minAlt}}m–{{maxAlt}}m)\ncc @intel.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.naturalZone",
+        "template": "[NaturalZone] {{displayName}} ({{zoneType}})\ncc @intel.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.spatialEvent",
+        "condition": "{{eventType}} == 'earthquake' && {{magnitude}} >= 5.0",
+        "template": "[Seismic] M{{magnitude}} {{place}} depth:{{depth}}km\ncc @jinushi.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.airport",
+        "template": "[Airport] {{name}} ({{icaoCode}}/{{iataCode}}) registered\ncc @intel.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.port",
+        "template": "[Port] {{name}} registered\ncc @intel.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.satelliteScene",
+        "template": "[Satellite] {{satellite}} scene {{sceneId}} ({{acquisitionDate}})\ncc @intel.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.station",
+        "template": "[Station] {{name}} registered\ncc @intel.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.spot",
+        "template": "[Spot] {{name}} ({{category}})\ncc @intel.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.legalEntity",
+        "template": "[Entity] {{name}} ({{entityType}}, {{jurisdiction}})\ncc @jinushi.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.landRegistry",
+        "template": "[LandRegistry] {{registryNumber}} ({{jurisdiction}}, {{propertyType}})\ncc @jinushi.etzhayyim.com"
+      },
+      {
+        "on": "com.etzhayyim.apps.maps.businessRegistry",
+        "template": "[BusinessRegistry] {{name}} №{{registryNumber}} ({{jurisdiction}})\ncc @jinushi.etzhayyim.com"
+      }
+    ]
+  },
+  "uiType": "appview"
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@etzhayyim/maps-kotoba",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "kotoba reference implementation of maps Tier A surfaces (Source DID registry first) using @etzhayyim/sdk. Mirrors the open-isic/kotoba pattern; substrate posture per ADR-2605172000 + ADR-2605231400. First wave: Source DID registry (24 records). Subsequent waves add AdminArea / Geo DID / Display layer / Registry & Legal Entity register/list \u2014 see MIGRATION-TODO.md Phase 1.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "seed:sources": "tsx src/source/seed.ts",
+    "query:sources": "tsx src/source/query.ts",
+    "seed:geo": "tsx src/geo/seed.ts",
+    "query:geo": "tsx src/geo/query.ts",
+    "query:display-layer": "tsx src/display-layer/query.ts",
+    "query:registry": "tsx src/registry/query.ts",
+    "query:collection": "tsx src/collection/query.ts",
+    "verify": "tsx src/verify.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@etzhayyim/sdk": "git+https://github.com/etzhayyim/com-etzhayyim-sdk.git#12314a0cc5ac2feb49dd9789d5c002398acb6988"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.0"
+  }
+}

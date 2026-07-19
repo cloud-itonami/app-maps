@@ -1,0 +1,426 @@
+<!doctype html>
+<!--
+  maps-walk.htm — Isekai/Minecraft-style ground-level walker for maps.etzhayyim.com.
+
+  Anchor position is read from URL search params:
+    ?lat=35.6812&lng=139.7671
+
+  The WASM world is local-meters around the anchor; buildings are streamed
+  from `com.etzhayyim.apps.maps.getChunk` every 4 s as the player moves.
+
+  When embedded in the main map as an iframe, clicking "Exit" posts
+  { type: 'exit-walk' } to window.parent so App.svelte can restore the 2D view.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>maps walk — kami-app</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0c0e14; font-family: Nunito, system-ui, sans-serif; color: #fff; }
+    #gc { display: block; width: 100vw; height: 100vh; }
+
+    /* HUD top-left: position + FPS */
+    #hud {
+      position: fixed; top: 12px; left: 12px;
+      background: rgba(255,255,255,0.92); color: #1c1d24;
+      padding: 8px 12px; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      font-size: 13px; line-height: 1.5; pointer-events: none;
+      min-width: 180px;
+    }
+    #hud b { color: #5a4fcf; }
+
+    /* Compass rose top-center */
+    #compass {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,0.92); color: #1c1d24;
+      padding: 6px 14px; border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+      pointer-events: none; user-select: none;
+    }
+    #compass span { display: inline-block; width: 2.2em; text-align: center; }
+    #compass .active { color: #5a4fcf; }
+
+    /* Key hints bottom-center */
+    #hint {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,0.92); color: #1c1d24;
+      padding: 6px 12px; border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      font-size: 12px; pointer-events: none; white-space: nowrap;
+    }
+
+    /* Building/status bottom-left */
+    #status {
+      position: fixed; bottom: 16px; left: 12px;
+      background: rgba(255,255,255,0.92); color: #1c1d24;
+      padding: 6px 10px; border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      font-size: 12px; pointer-events: none;
+    }
+
+    /* Exit button top-right */
+    #exit-btn {
+      position: fixed; top: 12px; right: 12px;
+      background: rgba(99,102,241,0.88); color: #fff;
+      padding: 8px 16px; border-radius: 20px;
+      border: none; cursor: pointer;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.05em;
+      box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+      transition: background 0.15s;
+    }
+    #exit-btn:hover { background: rgba(99,102,241,1); }
+
+    /* Loading overlay */
+    #loading {
+      position: fixed; inset: 0; background: #0c0e14;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; z-index: 999;
+      transition: opacity 0.4s;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #00ffcc;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .load-label { font-size: 13px; color: #888; }
+  </style>
+</head>
+<body>
+<canvas id="gc" tabindex="0"></canvas>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span class="load-label">WebGPU を初期化中…</span>
+</div>
+
+<div id="hud">loading…</div>
+
+<div id="compass">
+  <span id="c-n">N</span>
+  <span id="c-ne">NE</span>
+  <span id="c-e">E</span>
+  <span id="c-se">SE</span>
+  <span id="c-s">S</span>
+  <span id="c-sw">SW</span>
+  <span id="c-w">W</span>
+  <span id="c-nw">NW</span>
+</div>
+
+<div id="hint">クリックでポインターロック · WASD 移動 · マウス 視点 · Space ジャンプ · Esc 解除</div>
+<div id="status">建物: 0</div>
+<button id="exit-btn">← マップに戻る</button>
+
+<script type="module">
+import init, { run_maps3d, set_buildings_json, set_mesh_tile, set_vegetation_json, set_atoms_json } from './maps-3d/kami_app_maps3d.js';
+
+// ── Anchor lat/lng from URL params ──────────────────────────────────────────
+const sp = new URLSearchParams(location.search);
+const ANCHOR_LAT = parseFloat(sp.get('lat') ?? '35.6812');
+const ANCHOR_LNG = parseFloat(sp.get('lng') ?? '139.7671');
+const M_PER_DEG_LAT = 110_574;
+const M_PER_DEG_LNG = 111_320 * Math.cos(ANCHOR_LAT * Math.PI / 180);
+
+function lngLatToWorld(lng, lat) {
+  return {
+    x: (lng - ANCHOR_LNG) * M_PER_DEG_LNG,
+    z: -(lat - ANCHOR_LAT) * M_PER_DEG_LAT,
+  };
+}
+function worldToLngLat(x, z) {
+  return {
+    lng: ANCHOR_LNG + x / M_PER_DEG_LNG,
+    lat: ANCHOR_LAT - z / M_PER_DEG_LAT,
+  };
+}
+
+// ── XRPC client (POST, matching XrpcHttpClient default in api.ts) ────────────
+async function getChunk(params) {
+  const res = await fetch('/xrpc/com.etzhayyim.apps.maps.getChunk', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`getChunk ${res.status}`);
+  return res.json();
+}
+
+async function getChunkModels(params) {
+  const res = await fetch('/xrpc/com.etzhayyim.apps.maps.getChunkModels', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`getChunkModels ${res.status}`);
+  return res.json();
+}
+
+// ── h3-js ────────────────────────────────────────────────────────────────────
+const { latLngToCell, gridDisk, cellToBoundary } = await import('https://esm.sh/h3-js@4.2.1');
+
+// ── FBM terrain height sampler (mirrors Rust Plains biome exactly) ───────────
+// Plains: max_height=80, frequency=0.008, octaves=7, lacunarity=2.0, persistence=0.5, seed=42
+// heightmap.rs: nx = wx*freq + seed (42), nz = wz*freq + seed*0.7 (29.4)
+function _h2d(x, y) {
+  let n = (Math.imul(x | 0, 1619) + Math.imul(y | 0, 31337)) | 0;
+  n = Math.imul(Math.imul(n, n), n);
+  n = (n >> 13) ^ n;
+  n = (Math.imul(n, (Math.imul(n, 60493) + 19990303) | 0) + 1376312589) | 0;
+  return (n & 0x7fffffff) / 0x7fffffff;
+}
+function _cosI(a, b, t) { const f = (1 - Math.cos(t * Math.PI)) * 0.5; return a * (1 - f) + b * f; }
+function _vn(x, y) {
+  const xi = Math.floor(x) | 0, yi = Math.floor(y) | 0;
+  const xf = x - Math.floor(x), yf = y - Math.floor(y);
+  return _cosI(_cosI(_h2d(xi, yi), _h2d(xi + 1, yi), xf), _cosI(_h2d(xi, yi + 1), _h2d(xi + 1, yi + 1), xf), yf);
+}
+function _fbm(x, y) {
+  let v = 0, amp = 1, freq = 1, maxAmp = 0;
+  for (let i = 0; i < 7; i++) { v += amp * _vn(x * freq, y * freq); maxAmp += amp; amp *= 0.5; freq *= 2.0; }
+  return v / maxAmp;
+}
+function terrainHeight(wx, wz) {
+  const h = _fbm(wx * 0.008 + 42, wz * 0.008 + 29.4);
+  const c = h * h * (3 - 2 * h); // smoothstep
+  return c * 80.0;
+}
+
+// ── Building feature → AABB extrude ─────────────────────────────────────────
+function featureToBox(feat) {
+  const props = feat.properties || {};
+  const heightM = typeof props.heightM === 'number' ? props.heightM
+    : typeof props.height_m === 'number' ? props.height_m
+    : (Number(props.levels) || 0) * 3.0;
+  const height = Math.max(heightM || 9.0, 3.0);
+  const geom = feat.geometry;
+  if (!geom) return null;
+  // Point buildings: synthesise a small square footprint (±8 m)
+  if (geom.type === 'Point') {
+    const [lng, lat] = geom.coordinates;
+    const w = lngLatToWorld(lng, lat);
+    const half = 8;
+    const baseY = terrainHeight(w.x, w.z);
+    return { minX: w.x - half, maxX: w.x + half, minZ: w.z - half, maxZ: w.z + half, baseY, height, color: [0.78, 0.74, 0.69] };
+  }
+  if (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon') return null;
+  const rings = geom.type === 'Polygon' ? [geom.coordinates[0]] : geom.coordinates.map(p => p[0]);
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const ring of rings) {
+    for (const [lng, lat] of ring) {
+      const w = lngLatToWorld(lng, lat);
+      if (w.x < minX) minX = w.x;
+      if (w.x > maxX) maxX = w.x;
+      if (w.z < minZ) minZ = w.z;
+      if (w.z > maxZ) maxZ = w.z;
+    }
+  }
+  if (!isFinite(minX)) return null;
+  const cx = (minX + maxX) * 0.5, cz = (minZ + maxZ) * 0.5;
+  const baseY = terrainHeight(cx, cz);
+  return { minX, maxX, minZ, maxZ, baseY, height, color: [0.78, 0.74, 0.69] };
+}
+
+// ── Compass update ────────────────────────────────────────────────────────────
+const DIRS = ['n','ne','e','se','s','sw','w','nw'];
+function updateCompass(yawDeg) {
+  // yaw=0 → looking north, yaw=90 → east (right-hand y-up)
+  // normalise to 0-360
+  const y = ((yawDeg % 360) + 360) % 360;
+  // 8-sector index: each sector = 45°, offset by 22.5° so north straddles 0.
+  const idx = Math.round(y / 45) % 8;
+  for (const d of DIRS) {
+    document.getElementById(`c-${d}`)?.classList.remove('active');
+  }
+  document.getElementById(`c-${DIRS[idx]}`)?.classList.add('active');
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+const hudEl   = document.getElementById('hud');
+const statusEl = document.getElementById('status');
+const loadEl  = document.getElementById('loading');
+
+await init('./maps-3d/kami_app_maps3d_bg.wasm');
+
+// run_maps3d returns only after the render loop exits (user closes tab).
+// Fire-and-forget; errors surface via the loading overlay message.
+run_maps3d('gc').then(() => {
+  // renderer exited cleanly
+}).catch((e) => {
+  if (loadEl) loadEl.innerHTML = `<span style="color:#f87171;padding:24px;text-align:center;">WebGPU 初期化失敗: ${e?.message ?? e}<br><small>WebGPU 対応ブラウザが必要です</small></span>`;
+  console.error('[maps-walk]', e);
+});
+
+// Hide loading overlay once first HUD frame arrives
+const loadPoll = setInterval(() => {
+  if (window.__kami_hud_maps3d) {
+    clearInterval(loadPoll);
+    loadEl?.classList.add('hidden');
+    setTimeout(() => loadEl?.remove(), 500);
+  }
+}, 200);
+
+// ── HUD + compass pump (250 ms) ───────────────────────────────────────────────
+setInterval(() => {
+  const h = window.__kami_hud_maps3d;
+  if (!h) return;
+  const ll = worldToLngLat(h.x, h.z);
+  hudEl.innerHTML = `
+    <div><b>maps walk</b> · ${h.backend}</div>
+    <div>fps ${h.fps.toFixed(0)}</div>
+    <div>${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}</div>
+    <div>高度 ${h.y.toFixed(1)} m</div>
+  `;
+  // yaw in radians → degrees (KamiApp: yaw=0 looks -Z = north when bearing=0)
+  const yawDeg = (h.yaw ?? 0) * 180 / Math.PI;
+  updateCompass(yawDeg);
+}, 250);
+
+// ── Building fetch loop ───────────────────────────────────────────────────────
+let lastFetchKey = '';
+async function fetchAndPushBuildings() {
+  try {
+    const h = window.__kami_hud_maps3d;
+    if (!h) return;
+    const ll = worldToLngLat(h.x, h.z);
+    // res10 cells (~53m edge) + radius-10 disk ≈ 530m coverage, matching DB building distribution
+    const centre = latLngToCell(ll.lat, ll.lng, 10);
+    const cells = gridDisk(centre, 10);
+    const key = centre + ':' + cells.length;
+    if (key === lastFetchKey) return;
+    lastFetchKey = key;
+
+    const t0 = performance.now();
+    const res = await getChunk({ h3Cells: cells, lod: 10, labels: ['Building'], limit: 4000 });
+    const features = [];
+    for (const cell of Object.values(res.chunks || {})) {
+      for (const f of (cell.Building || [])) features.push(f);
+    }
+    const boxes = features.map(featureToBox).filter(Boolean);
+    set_buildings_json(JSON.stringify(boxes));
+    statusEl.textContent = `建物: ${boxes.length}  ·  ${(performance.now() - t0).toFixed(0)}ms`;
+  } catch (e) {
+    console.warn('[maps-walk] building fetch failed', e);
+    statusEl.textContent = 'fetch failed: ' + (e?.message ?? e);
+  }
+}
+
+// ── Mesh tile loop (photogrammetry, Phase 2) ──────────────────────────────────
+const meshTileCache = new Set();
+async function fetchAndPushMeshTiles() {
+  try {
+    const h = window.__kami_hud_maps3d;
+    if (!h) return;
+    const ll = worldToLngLat(h.x, h.z);
+    const centre = latLngToCell(ll.lat, ll.lng, 12);
+    const cells = gridDisk(centre, 4);
+    const url = new URL('/xrpc/com.etzhayyim.apps.maps3d.listProcessedTiles', location.origin);
+    url.searchParams.set('h3Cells', JSON.stringify(cells));
+    const res = await fetch(url.toString(), { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const j = await res.json();
+    for (const tile of (j.tiles || [])) {
+      if (!tile.tileH3 || !tile.meshUri || meshTileCache.has(tile.tileH3)) continue;
+      const glb = await fetch(tile.meshUri, { mode: 'cors' });
+      if (!glb.ok) continue;
+      const buf = new Uint8Array(await glb.arrayBuffer());
+      try { set_mesh_tile(tile.tileH3, buf); meshTileCache.add(tile.tileH3); } catch {}
+    }
+  } catch {}
+}
+
+// ── DB-driven science model loop (vertex_kami_model_instance) ─────────────────
+// Queries vertex_kami_model_instance JOIN vertex_kami_model_def JOIN vertex_scientific_taxon
+// for the current H3 tile and pushes buildings (AABB from DB), vegetation profiles
+// (for future set_vegetation_json), and atom spheres to the engine.
+let lastModelFetchKey = '';
+async function fetchAndPushModels() {
+  try {
+    const h = window.__kami_hud_maps3d;
+    if (!h) return;
+    const ll = worldToLngLat(h.x, h.z);
+    const centre = latLngToCell(ll.lat, ll.lng, 10);
+    const cells = gridDisk(centre, 6);
+    const key = `m:${centre}`;
+    if (key === lastModelFetchKey) return;
+    lastModelFetchKey = key;
+
+    const t0 = performance.now();
+    // Compute bbox for all cells (used by server-side fallback query on vertex_maps_building_3d)
+    let bboxW = Infinity, bboxS = Infinity, bboxE = -Infinity, bboxN = -Infinity;
+    for (const c of cells) {
+      for (const [lat, lng] of cellToBoundary(c)) {
+        if (lng < bboxW) bboxW = lng; if (lng > bboxE) bboxE = lng;
+        if (lat < bboxS) bboxS = lat; if (lat > bboxN) bboxN = lat;
+      }
+    }
+    const data = await getChunkModels({ h3Cells: cells, limit: 2000, anchorLat: ANCHOR_LAT, anchorLng: ANCHOR_LNG, west: bboxW, south: bboxS, east: bboxE, north: bboxN });
+
+    // DB-sourced building overrides: push if DB has typed instances for these tiles
+    const dbBuildings = data.buildings || [];
+    if (dbBuildings.length > 0) {
+      set_buildings_json(JSON.stringify(dbBuildings));
+    }
+
+    // Vegetation: OwnedTaxonomicProfile array → kami-app-maps3d vegetation renderer
+    const vegProfiles = data.vegetation || [];
+    if (vegProfiles.length > 0) {
+      set_vegetation_json(JSON.stringify(vegProfiles));
+    }
+
+    // Atoms: CPK sphere array — vertex_periodic_element / vertex_compound → kami-app-maps3d atom renderer
+    const atomItems = data.atoms || [];
+    if (atomItems.length > 0) {
+      set_atoms_json(JSON.stringify(atomItems));
+    }
+
+    // Update status with science model counts
+    const mc = data.modelCounts || {};
+    const total = (mc.total ?? (dbBuildings.length + vegProfiles.length + (data.atoms || []).length));
+    if (total > 0) {
+      const ms = (performance.now() - t0).toFixed(0);
+      const parts = [];
+      if (dbBuildings.length > 0) parts.push(`建物DB: ${dbBuildings.length}`);
+      if (vegProfiles.length > 0) parts.push(`植生: ${vegProfiles.length}`);
+      if ((data.atoms || []).length > 0) parts.push(`原子: ${data.atoms.length}`);
+      statusEl.textContent = parts.join('  ·  ') + `  ·  ${ms}ms`;
+    }
+  } catch (e) {
+    // getChunkModels 未実装時は静かに無視（OSM fallback が動作し続ける）
+    if (!e?.message?.includes('404') && !e?.message?.includes('getChunkModels')) {
+      console.warn('[maps-walk] model fetch failed', e);
+    }
+  }
+}
+
+// Start fetch loops once HUD is alive
+const bootPoll = setInterval(() => {
+  if (window.__kami_hud_maps3d) {
+    clearInterval(bootPoll);
+    fetchAndPushBuildings();
+    setInterval(fetchAndPushBuildings, 4000);
+    setInterval(fetchAndPushMeshTiles, 8000);
+    fetchAndPushMeshTiles();
+    fetchAndPushModels();
+    setInterval(fetchAndPushModels, 6000);
+  }
+}, 250);
+
+// ── Exit button ───────────────────────────────────────────────────────────────
+document.getElementById('exit-btn')?.addEventListener('click', () => {
+  // If embedded as iframe, notify parent; otherwise navigate back.
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ type: 'exit-walk' }, '*');
+  } else {
+    history.back();
+  }
+});
+</script>
+</body>
+</html>

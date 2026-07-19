@@ -1,0 +1,96 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/2024-11-05/tool-list.json",
+  "name": "maps-bulk-ingest",
+  "description": "Bulk dumper triggers for maps coverage acceleration. Each tool POSTs /trigger to the corresponding K8s resident pod and returns 202+job state.",
+  "tools": [
+    {
+      "name": "maps.bulk.refresh_wikidata",
+      "description": "Trigger a full Wikidata P625 dump (5M rows, 8-12h). Streams latest-all.json.gz, filters to coord-bearing entities, writes Parquet to B2, COPY into vertex_spatial. Idempotent: collisions silently dropped.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "endpoint": {
+        "method": "POST",
+        "url": "http://bulk-ingest-wikidata.maps-bulk-ingest.svc.cluster.local:8080/trigger"
+      }
+    },
+    {
+      "name": "maps.bulk.refresh_wikipedia",
+      "description": "Trigger a full Wikipedia geo_tags dump across 107+ langs (5-15M rows, 4-6h). Per lang: download geo_tags.sql.gz + page.sql.gz, JOIN, parquet, COPY.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "langs": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional comma-separated lang codes; default = all 107 in pod env."
+          }
+        },
+        "additionalProperties": false
+      },
+      "endpoint": {
+        "method": "POST",
+        "url": "http://bulk-ingest-wikipedia.maps-bulk-ingest.svc.cluster.local:8080/trigger"
+      }
+    },
+    {
+      "name": "maps.bulk.refresh_osm_planet",
+      "description": "Trigger Geofabrik regional PBF dumps (50M rows, 6-10h). Per region: PBF download → osmium tags-filter → geojsonseq export → parquet → COPY.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "regions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional regions like 'asia/japan'; default = 8 continents."
+          }
+        },
+        "additionalProperties": false
+      },
+      "endpoint": {
+        "method": "POST",
+        "url": "http://bulk-ingest-osm-planet.maps-bulk-ingest.svc.cluster.local:8080/trigger"
+      }
+    },
+    {
+      "name": "maps.bulk.status",
+      "description": "Query current dump state across all 3 workers. Returns {wikidata: {...}, wikipedia: {...}, osm_planet: {...}} with running/started_at/rows_written/current_*/error fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["wikidata", "wikipedia", "osm_planet", "all"],
+            "default": "all"
+          }
+        },
+        "additionalProperties": false
+      },
+      "endpoint": {
+        "method": "GET",
+        "url": "http://bulk-ingest-{source}.maps-bulk-ingest.svc.cluster.local:8080/status"
+      }
+    }
+  ],
+  "auth": {
+    "type": "atproto-service-auth",
+    "lxm_required": true,
+    "scope": "com.etzhayyim.apps.maps.bulk.*",
+    "note": "Per ADR-0022 Auth Topology, mutation tools (refresh_*) require ES256 Service Auth JWT with lxm claim matching tool name. status is read-only and public."
+  },
+  "deployment": {
+    "k8s_namespace": "maps-bulk-ingest",
+    "deployments": [
+      "bulk-ingest-wikidata",
+      "bulk-ingest-wikipedia",
+      "bulk-ingest-osm-planet"
+    ],
+    "bpmn_triggers": [
+      "com.etzhayyim.apps.maps.bulkRefreshWikidata (R/PT24H)",
+      "com.etzhayyim.apps.maps.bulkRefreshWikipedia (R/PT24H)",
+      "com.etzhayyim.apps.maps.bulkRefreshOsmPlanet (R/P7D)"
+    ]
+  }
+}

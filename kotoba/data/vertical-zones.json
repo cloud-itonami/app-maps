@@ -1,0 +1,19 @@
+{
+  "_comment": "14 vertical zones per maps CLAUDE.md §Layer 3 — atmosphere (5) + underground (4) + ocean (5).",
+  "zones": [
+    { "slug": "atmosphere-troposphere",  "kind": "atmosphere",  "name": "Troposphere",       "minMeters":      0, "maxMeters":  12000 },
+    { "slug": "atmosphere-stratosphere", "kind": "atmosphere",  "name": "Stratosphere",      "minMeters":  12000, "maxMeters":  50000 },
+    { "slug": "atmosphere-mesosphere",   "kind": "atmosphere",  "name": "Mesosphere",        "minMeters":  50000, "maxMeters":  85000 },
+    { "slug": "atmosphere-thermosphere", "kind": "atmosphere",  "name": "Thermosphere",      "minMeters":  85000, "maxMeters": 600000 },
+    { "slug": "atmosphere-exosphere",    "kind": "atmosphere",  "name": "Exosphere",         "minMeters": 600000, "maxMeters": 10000000 },
+    { "slug": "underground-soil",        "kind": "underground", "name": "Soil layer",        "minMeters":     -2, "maxMeters":      0 },
+    { "slug": "underground-shallow",     "kind": "underground", "name": "Shallow utilities", "minMeters":    -20, "maxMeters":     -2 },
+    { "slug": "underground-deep",        "kind": "underground", "name": "Deep utilities / subway",   "minMeters":   -100, "maxMeters":    -20 },
+    { "slug": "underground-bedrock",     "kind": "underground", "name": "Bedrock",           "minMeters":  -1000, "maxMeters":   -100 },
+    { "slug": "ocean-epipelagic",        "kind": "ocean",       "name": "Epipelagic (sunlit)", "minMeters": -200, "maxMeters": 0 },
+    { "slug": "ocean-mesopelagic",       "kind": "ocean",       "name": "Mesopelagic (twilight)", "minMeters": -1000, "maxMeters": -200 },
+    { "slug": "ocean-bathypelagic",      "kind": "ocean",       "name": "Bathypelagic (midnight)", "minMeters": -4000, "maxMeters": -1000 },
+    { "slug": "ocean-abyssopelagic",     "kind": "ocean",       "name": "Abyssopelagic",     "minMeters":  -6000, "maxMeters":  -4000 },
+    { "slug": "ocean-hadalpelagic",      "kind": "ocean",       "name": "Hadalpelagic (trench)", "minMeters": -11000, "maxMeters": -6000 }
+  ]
+}

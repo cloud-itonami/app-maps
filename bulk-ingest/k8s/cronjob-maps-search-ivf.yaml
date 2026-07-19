@@ -1,0 +1,113 @@
+# no-server-key: read-only — pending Stage A-E member-signed-writes refactor per ADR-2605231525
+# maps-search-ivf-backfill — incremental embedding backfill + nightly KMeans.
+#
+# ADR-2605011500 §Phase-1.3.
+#
+# Two flavours:
+#   1. Incremental backfill (every 6h, fast): embeds new vessel/spatial names
+#      that appeared since the last run. No KMeans.
+#   2. Nightly retrain (daily 03:00 UTC): same backfill + sklearn MiniBatchKMeans
+#      → centroid table refresh + cluster_id reassignment for every embedding.
+#
+# Both share the same image. Toggle via TRAIN_CENTROIDS env (0 vs 1).
+#
+# Required secrets in maps-bulk-ingest-credentials:
+#   DATABASE_URL         — RisingWave Postgres URL
+#   CF_API_TOKEN         — Cloudflare API token with Workers AI:Read scope
+#   CF_ACCOUNT_ID        — Cloudflare account UUID (4da88288dc30d9ee257f319d3c33ecf0)
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: maps-search-ivf-incremental
+  namespace: maps-bulk-ingest
+  labels:
+    app.kubernetes.io/name: maps-search-ivf-incremental
+    app.kubernetes.io/part-of: maps
+spec:
+  schedule: "5 */6 * * *"   # every 6 hours at :05
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: ghcr-pull
+          containers:
+            - name: backfill
+              image: ghcr.io/etzhayyim/maps-bulk-ingest:1.5.1
+              command: ["python", "/app/workers/maps_search_ivf_backfill.py"]
+              envFrom:
+                - secretRef:
+                    name: maps-bulk-ingest-credentials
+              env:
+                - name: IVF_SPACE
+                  value: "maps_search_v1"
+                - name: IVF_MODEL
+                  value: "@cf/baai/bge-base-en-v1.5"
+                - name: IVF_K
+                  value: "128"
+                - name: IVF_BATCH
+                  value: "50"
+                - name: IVF_MAX_PER_RUN
+                  value: "5000"
+                - name: TRAIN_CENTROIDS
+                  value: "0"
+                - name: INCLUDE_LEGAL_ENTITY
+                  value: "0"
+              resources:
+                requests: {cpu: 200m, memory: 256Mi}
+                limits:   {cpu: 1000m, memory: 1Gi}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: maps-search-ivf-retrain
+  namespace: maps-bulk-ingest
+  labels:
+    app.kubernetes.io/name: maps-search-ivf-retrain
+    app.kubernetes.io/part-of: maps
+spec:
+  schedule: "0 3 * * *"     # daily at 03:00 UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 7200
+      template:
+        spec:
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: ghcr-pull
+          containers:
+            - name: retrain
+              image: ghcr.io/etzhayyim/maps-bulk-ingest:1.5.1
+              command: ["python", "/app/workers/maps_search_ivf_backfill.py"]
+              envFrom:
+                - secretRef:
+                    name: maps-bulk-ingest-credentials
+              env:
+                - name: IVF_SPACE
+                  value: "maps_search_v1"
+                - name: IVF_MODEL
+                  value: "@cf/baai/bge-base-en-v1.5"
+                - name: IVF_K
+                  value: "128"
+                - name: IVF_BATCH
+                  value: "50"
+                - name: IVF_MAX_PER_RUN
+                  value: "20000"
+                - name: TRAIN_CENTROIDS
+                  value: "1"          # KMeans → centroid refresh
+                - name: INCLUDE_LEGAL_ENTITY
+                  value: "1"
+              resources:
+                requests: {cpu: 500m, memory: 1Gi}
+                limits:   {cpu: 2000m, memory: 4Gi}

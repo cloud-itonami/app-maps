@@ -1,0 +1,16 @@
+{;; Scoped babashka project for the maps bulk-ingest python -> clj port
+ ;; (ADR-2606280030). This app is NOT a LangGraph StateGraph app — it is a set
+ ;; of plain bulk-ingest workers — so there are no langgraph-clj/langchain-clj
+ ;; deps; the verifiable core (kotoba-feature pure converters + the substrate
+ ;; write seam) depends only on bb built-ins (cheshire, babashka.http-client).
+ ;; This bb.edn is APP-LOCAL and does NOT touch the repo-root bb.edn.
+ ;;
+ ;; Classpath root = this dir, so a co-located .cljc at
+ ;;   maps/bulk_ingest/<x>.cljc  ⇒  ns  maps.bulk-ingest.<x>
+ ;;
+ ;;   cd 60-apps/etzhayyim-project-maps/bulk-ingest/clj && bb run_tests.clj
+ ;;   # or: bb test
+ :paths ["."]
+ :tasks
+ {test {:doc "Run the maps bulk-ingest clj test-suite (clojure.test, bb)."
+        :task (load-file "run_tests.clj")}}}

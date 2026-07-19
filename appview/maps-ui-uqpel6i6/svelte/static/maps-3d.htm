@@ -1,0 +1,725 @@
+<!doctype html>
+<!--
+  maps-3d.htm — Phase 1 walkable 3D map shell.
+
+  Loads kami-app-maps3d (WebGPU), anchors the world at Tokyo Station,
+  fetches buildings for the player's current XZ via
+  com.etzhayyim.apps.maps.getChunk, and pushes AABB extrudes to the WASM.
+
+  Build:
+    cd 40-engine/kami-engine
+    wasm-pack build --target web --release kami-app-maps3d
+    APP=60-apps/etzhayyim-project-maps/appview/maps-ui-uqpel6i6
+    mkdir -p $APP/svelte/static/maps-3d
+    cp kami-app-maps3d/pkg/* $APP/svelte/static/maps-3d/
+
+  Phase 1 limitations: AABB-of-footprint (no earcut yet), single-thread
+  fetch loop, no streaming budget. Refinements live in `kami-app-maps3d`
+  + this shell as the map graph fills in.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>maps3d — kami-app Builder</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0c0e14; font-family: Nunito, system-ui, sans-serif; color: #fff; }
+    #gc { display: block; width: 100vw; height: 100vh; }
+    #hud {
+      position: fixed; top: 12px; left: 12px;
+      background: rgba(255,255,255,0.92); color: #1c1d24;
+      padding: 8px 12px; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      font-size: 13px; line-height: 1.4; pointer-events: none;
+      min-width: 160px;
+    }
+    #hud b { color: #5a4fcf; }
+    #status {
+      position: fixed; bottom: 12px; left: 12px;
+      background: rgba(255,255,255,0.92); color: #1c1d24;
+      padding: 6px 10px; border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      font-size: 12px; pointer-events: none;
+    }
+    #hint {
+      position: fixed; top: 12px; right: 12px;
+      background: rgba(255,255,255,0.92); color: #1c1d24;
+      padding: 6px 10px; border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      font-size: 12px; pointer-events: none;
+    }
+    #train-splat-btn, #bake-splat-btn {
+      background: #5a4fcf; color: #fff; border: none;
+      padding: 8px 14px; border-radius: 999px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+      font: 600 12px Nunito, system-ui, sans-serif;
+      cursor: pointer; pointer-events: auto;
+    }
+    #bake-splat-btn { background: #cf8a4f; }
+    #train-splat-btn:hover { background: #6e63d8; }
+    #bake-splat-btn:hover  { background: #d99c69; }
+    #train-splat-btn:disabled, #bake-splat-btn:disabled { background: #888; cursor: progress; }
+    #train-splat-toast {
+      position: fixed; bottom: 60px; right: 12px;
+      max-width: 320px;
+      background: rgba(255,255,255,0.96); color: #1c1d24;
+      padding: 8px 12px; border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      font: 600 12px Nunito, system-ui, sans-serif;
+      display: none; pointer-events: none;
+    }
+    #jobs-hud {
+      position: fixed; top: 12px; right: 12px;
+      width: 280px; max-height: 320px; overflow: hidden;
+      background: rgba(255,255,255,0.94); color: #1c1d24;
+      padding: 8px 10px; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      font: 600 11px Nunito, system-ui, sans-serif;
+      display: none; pointer-events: none;
+    }
+    #jobs-hud h4 { margin: 0 0 6px 0; font-size: 11px; color: #5a4fcf; }
+    #jobs-hud .cost { margin: 0 0 6px 0; font-size: 10px; color: #444; font-variant-numeric: tabular-nums; }
+    #jobs-hud .cost b { color: #2c7a2c; font-weight: 600; }
+    #jobs-hud .row { display: flex; gap: 6px; align-items: center; padding: 2px 0; border-bottom: 1px dashed rgba(0,0,0,0.08); }
+    #jobs-hud .row:last-child { border-bottom: none; }
+    #jobs-hud .tile { font-family: ui-monospace, monospace; color: #777; min-width: 56px; }
+    #jobs-hud .kind { width: 14px; text-align: center; }
+    #jobs-hud .status { padding: 1px 4px; border-radius: 4px; font-size: 10px; }
+    #jobs-hud .s-running   { background: #e0e8ff; color: #2c3eb0; }
+    #jobs-hud .s-completed { background: #d8f0d8; color: #2c7a2c; }
+    #jobs-hud .s-failed    { background: #ffd8d8; color: #b02c2c; }
+    #jobs-hud .s-queued    { background: #f0e0d8; color: #8a4f2c; }
+    #jobs-hud .phase { color: #444; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #jobs-hud .age   { color: #999; font-size: 10px; }
+  </style>
+</head>
+<body>
+<canvas id="gc" tabindex="0"></canvas>
+<div id="hud">loading…</div>
+<div id="hint">click canvas → WASD walk · Space jump · mouse look</div>
+<div id="status">buildings: 0</div>
+<div id="splat-buttons" style="position:fixed;bottom:12px;right:12px;display:flex;gap:6px;flex-direction:column;align-items:flex-end;">
+  <button id="train-splat-btn" title="Train a 3DGS splat at this lat/lng from Mapillary imagery (ADR-2605092800)">📷 Train splat here</button>
+  <button id="bake-splat-btn" title="Bake a static mesh from the current tile's splat (idempotent, ~3-5 min)">🔨 Bake mesh here</button>
+</div>
+<div id="train-splat-toast"></div>
+<div id="jobs-hud">
+  <h4>Recent gsplat jobs</h4>
+  <div id="jobs-hud-cost" class="cost">$… today</div>
+  <div id="jobs-hud-rows">…</div>
+</div>
+<script type="module">
+import init, {
+  run_maps3d,
+  set_buildings_json,
+  set_mesh_tile,
+  remove_mesh_tile,
+  set_gsplat_asset,
+  remove_gsplat_asset,
+} from './maps-3d/kami_app_maps3d.js';
+
+// ── World anchor: Tokyo Station (35.6812, 139.7671) ──
+// Local meters around this lat/lng → KamiApp world coords. f32 stays
+// well-behaved within ±5 km of the anchor.
+const ANCHOR_LAT = 35.6812;
+const ANCHOR_LNG = 139.7671;
+const M_PER_DEG_LAT = 110_574;
+const M_PER_DEG_LNG = 111_320 * Math.cos(ANCHOR_LAT * Math.PI / 180);
+
+function lngLatToWorld(lng, lat) {
+  return {
+    x: (lng - ANCHOR_LNG) * M_PER_DEG_LNG,
+    z: -(lat - ANCHOR_LAT) * M_PER_DEG_LAT, // -Z = north so yaw=0 looks north
+  };
+}
+function worldToLngLat(x, z) {
+  return {
+    lng: ANCHOR_LNG + x / M_PER_DEG_LNG,
+    lat: ANCHOR_LAT - z / M_PER_DEG_LAT,
+  };
+}
+
+// ── XRPC client (maps-ui = same origin, AT-native) ──
+async function getChunk(params) {
+  const url = new URL('/xrpc/com.etzhayyim.apps.maps.getChunk', location.origin);
+  url.searchParams.set('h3Cells', JSON.stringify(params.h3Cells));
+  url.searchParams.set('lod', String(params.lod));
+  url.searchParams.set('labels', JSON.stringify(params.labels));
+  if (params.limit) url.searchParams.set('limit', String(params.limit));
+  const res = await fetch(url.toString(), { credentials: 'same-origin' });
+  if (!res.ok) throw new Error(`getChunk ${res.status}`);
+  return res.json();
+}
+
+// ── h3-js loaded via CDN (kept out of the WASM bundle) ──
+const h3Mod = await import('https://esm.sh/h3-js@4.2.1');
+const { latLngToCell, gridDisk, cellToLatLng } = h3Mod;
+
+// ── Building feature → AABB extrude ──
+function featureToBox(feat) {
+  const props = feat.properties || {};
+  const heightM = typeof props.heightM === 'number' ? props.heightM
+    : typeof props.height_m === 'number' ? props.height_m
+    : (Number(props.levels) || 0) * 3.0;
+  const height = Math.max(heightM || 9.0, 3.0); // default ~ 3-storey
+  const geom = feat.geometry;
+  if (!geom || (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon')) return null;
+  const rings = geom.type === 'Polygon' ? [geom.coordinates[0]] : geom.coordinates.map(p => p[0]);
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const ring of rings) {
+    for (const [lng, lat] of ring) {
+      const w = lngLatToWorld(lng, lat);
+      if (w.x < minX) minX = w.x;
+      if (w.x > maxX) maxX = w.x;
+      if (w.z < minZ) minZ = w.z;
+      if (w.z > maxZ) maxZ = w.z;
+    }
+  }
+  if (!isFinite(minX)) return null;
+  // Phase-1: AABB approximation. Earcut-of-rings is the Phase-2 upgrade.
+  return {
+    minX, maxX, minZ, maxZ,
+    baseY: 0,
+    height,
+    color: [0.78, 0.74, 0.69],
+  };
+}
+
+// ── Boot ──
+const hudEl = document.getElementById('hud');
+const statusEl = document.getElementById('status');
+
+await init('./maps-3d/kami_app_maps3d_bg.wasm');
+run_maps3d('gc').catch((e) => {
+  hudEl.textContent = 'WebGPU init failed: ' + e;
+  console.error(e);
+});
+
+// HUD pump (KamiApp publishes window.__kami_hud_maps3d each frame)
+setInterval(() => {
+  const h = window.__kami_hud_maps3d;
+  if (!h) return;
+  const ll = worldToLngLat(h.x, h.z);
+  hudEl.innerHTML = `
+    <div><b>maps3d</b> · ${h.backend}</div>
+    <div>fps ${h.fps.toFixed(0)}</div>
+    <div>x ${h.x.toFixed(1)}m  z ${h.z.toFixed(1)}m  y ${h.y.toFixed(1)}m</div>
+    <div>${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}</div>
+  `;
+}, 250);
+
+// ── Building fetch loop: every 4 s, request the disc of H3 cells around
+// the player and push AABBs to WASM. h3 res 12 ≈ 9 m edge, so disc radius
+// 12 cells covers ~ 100 m around the player — enough for collisions to
+// load just-in-time. ──
+let lastFetchKey = '';
+async function fetchAndPushBuildings() {
+  try {
+    const h = window.__kami_hud_maps3d;
+    if (!h) return;
+    const ll = worldToLngLat(h.x, h.z);
+    const centre = latLngToCell(ll.lat, ll.lng, 12);
+    const cells = gridDisk(centre, 12);
+    const key = centre + ':' + cells.length;
+    if (key === lastFetchKey) return; // unchanged window
+    lastFetchKey = key;
+
+    const t0 = performance.now();
+    const res = await getChunk({
+      h3Cells: cells,
+      lod: 12,
+      labels: ['Building'],
+      limit: 4000,
+    });
+    const features = [];
+    for (const cell of Object.values(res.chunks || {})) {
+      for (const f of (cell.Building || [])) features.push(f);
+    }
+    const boxes = features.map(featureToBox).filter(Boolean);
+    set_buildings_json(JSON.stringify(boxes));
+    statusEl.textContent = `buildings: ${boxes.length}  ·  fetch ${(performance.now() - t0).toFixed(0)}ms`;
+  } catch (e) {
+    console.warn('[maps3d] building fetch failed', e);
+    statusEl.textContent = 'fetch failed: ' + (e && e.message ? e.message : e);
+  }
+}
+
+// First fetch as soon as HUD is alive, then every 4 s.
+const bootPoll = setInterval(() => {
+  if (window.__kami_hud_maps3d) {
+    clearInterval(bootPoll);
+    fetchAndPushBuildings();
+    setInterval(fetchAndPushBuildings, 4000);
+    // Mesh tile loop fires lazily — only attempts an XRPC + B2 fetch
+    // for tiles that the photogrammetry BPMN has marked done. Until
+    // that endpoint ships, the loop short-circuits silently on 404.
+    setInterval(fetchAndPushMeshTiles, 8000);
+    fetchAndPushMeshTiles();
+  }
+}, 250);
+
+const meshTileCache = new Set();
+async function fetchAndPushMeshTiles() {
+  try {
+    const h = window.__kami_hud_maps3d;
+    if (!h) return;
+    const ll = worldToLngLat(h.x, h.z);
+    const centre = latLngToCell(ll.lat, ll.lng, 12);
+    const cells = gridDisk(centre, 4); // tighter ring for mesh — heavier per tile
+    // Phase 2 endpoint: com.etzhayyim.apps.maps3d.listProcessedTiles. The
+    // BPMN-as-actor publishes mesh_uri into vertex_maps3d_tile, this
+    // XRPC reads it back. If unavailable (pipeline not yet running),
+    // we silently skip and try again next tick.
+    const url = new URL('/xrpc/com.etzhayyim.apps.maps3d.listProcessedTiles', location.origin);
+    url.searchParams.set('h3Cells', JSON.stringify(cells));
+    const res = await fetch(url.toString(), { credentials: 'same-origin' });
+    if (!res.ok) return; // 404 is expected before backend ships
+    const j = await res.json();
+    for (const tile of (j.tiles || [])) {
+      if (!tile.tileH3 || !tile.meshUri || meshTileCache.has(tile.tileH3)) continue;
+      const glb = await fetch(tile.meshUri, { mode: 'cors' });
+      if (!glb.ok) continue;
+      const buf = new Uint8Array(await glb.arrayBuffer());
+      try {
+        set_mesh_tile(tile.tileH3, buf);
+        meshTileCache.add(tile.tileH3);
+      } catch (e) {
+        console.warn('[maps3d] set_mesh_tile failed', tile.tileH3, e);
+      }
+    }
+  } catch (e) {
+    // Quiet — pipeline may not be running yet.
+    if (window.__maps3d_debug) console.debug('[maps3d] mesh fetch skipped', e);
+  }
+}
+
+// ── Gsplat preview / QC + baked-mesh consumption (ADR-2605092800) ────
+// Off by default. Toggle with `?gsplat=1` in the URL or
+// `window.__maps3d_gsplat = true` in DevTools. Clouds are capped at
+// 50 000 splats per tile (kami_pipelines::MAX_SPLATS_PER_CLOUD).
+//
+// `getGsplatAsset` may also include `bakedMeshUrl` (when the
+// splat→mesh bake has completed). We always honour the mesh path —
+// runtime delivery stays on baked static GLBs per 260416 design — by
+// shoving the GLB into the existing `set_mesh_tile` path.
+// Negative-cache: tiles we've already probed (regardless of success).
+// Cleared on user trigger via `__maps3d_clearGsplatCache()`.
+const gsplatTileCache = new Set();
+const gsplatMeshTileCache = new Set();
+// Loaded-set: tiles currently resident on the GPU. A subset of
+// gsplatTileCache (only the ones that succeeded). Used by the
+// auto-evict pass to drop tiles the player has walked away from.
+const gsplatLoaded = new Set();
+const gsplatMeshLoaded = new Set();
+// Per-tile LOD level currently resident, keyed by tileH3. Levels:
+//   1.0  = full PLY (closest tier, ≤15m)
+//   0.5  = first 50% of bytes (top-50% by opacity, 15-30m)
+//   0.25 = first 25% of bytes                       (30-60m)
+//   0.10 = first 10% of bytes                       (>60m)
+const gsplatLoadedLOD = new Map();
+
+/// Pick the LOD level for a tile based on the player → tile-centre
+/// distance in metres. Streaming relies on the dumper writing splats
+/// opacity-descending so a Range fetch of the leading bytes returns
+/// the top-N highest-opacity splats (quality-LOD for free).
+function lodForDistance(distanceM) {
+  if (distanceM < 15)  return 1.0;
+  if (distanceM < 30)  return 0.5;
+  if (distanceM < 60)  return 0.25;
+  return 0.10;
+}
+
+/// Per-tier byte budget cap. Applied on top of the fraction so that
+/// high-SH PLYs (degree=3 → ~236 B/splat = 4× the degree=0 cost) do
+/// not blow the bandwidth budget on far tiles. For typical degree=0
+/// tiles (≤6 MB total) the cap rarely binds; for degree=3 it
+/// degrades aggressively.
+const MAX_BYTES_PER_LOD = {
+  1.0:  4 * 1024 * 1024,
+  0.5:  2 * 1024 * 1024,
+  0.25: 1 * 1024 * 1024,
+  0.10:     512 * 1024,
+};
+function lodEffectiveBytes(lod, totalBytes) {
+  const fractionBytes = Math.floor(totalBytes * lod);
+  const cap = MAX_BYTES_PER_LOD[lod] ?? Infinity;
+  // Always keep enough for a usable cloud (header + at least a
+  // handful of splats). 8 KiB is a safe floor across degree 0..3.
+  return Math.max(8 * 1024, Math.min(fractionBytes, cap));
+}
+
+/// Convert lat/lng of a tile centre to the same world frame as the
+/// player. KamiApp's world is anchored at ANCHOR_LAT/ANCHOR_LNG (see
+/// top of this file), so the existing `lngLatToWorld` helper applies.
+function tileCentreWorld(tileH3) {
+  const [lat, lng] = cellToLatLng(tileH3);
+  return lngLatToWorld(lng, lat);
+}
+async function fetchAndPushGsplatTiles() {
+  try {
+    const enabled = window.__maps3d_gsplat === true
+      || new URLSearchParams(location.search).get('gsplat') === '1';
+    if (!enabled) return;
+    const h = window.__kami_hud_maps3d;
+    if (!h) return;
+    const ll = worldToLngLat(h.x, h.z);
+    const centre = latLngToCell(ll.lat, ll.lng, 12);
+    // Tight 1-ring (7 cells) — splats are heavy compared to AABB extrudes,
+    // and the budget on the WASM side is per-tile, not aggregate.
+    const cells = gridDisk(centre, 1);
+    const visible = new Set(cells);
+
+    // Auto-evict: tiles previously loaded but no longer in the
+    // visible 1-ring. Drops splat GPU memory immediately and clears
+    // the negative-cache so a re-entry re-fetches. Mesh tiles stay
+    // because the WASM mesh adapter has no "remove" call yet — but
+    // we drop the negative-cache so a new bake replaces it.
+    for (const tileH3 of Array.from(gsplatLoaded)) {
+      if (!visible.has(tileH3)) {
+        try { remove_gsplat_asset(tileH3); } catch {}
+        gsplatLoaded.delete(tileH3);
+        gsplatTileCache.delete(tileH3);
+        gsplatLoadedLOD.delete(tileH3);
+        if (window.__maps3d_debug) {
+          console.debug('[maps3d] gsplat evicted', tileH3);
+        }
+      }
+    }
+    for (const tileH3 of Array.from(gsplatMeshLoaded)) {
+      if (!visible.has(tileH3)) {
+        try { remove_mesh_tile(tileH3); } catch {}
+        gsplatMeshLoaded.delete(tileH3);
+        gsplatMeshTileCache.delete(tileH3);
+        if (window.__maps3d_debug) {
+          console.debug('[maps3d] gsplat-bake mesh evicted', tileH3);
+        }
+      }
+    }
+
+    // Process each tile concurrently — HTTP/2 multiplexes streams
+    // and HTTP/1.1 allows ≤6 in-flight per origin (the 1-ring is 7
+    // cells, near the limit). Each per-tile body is wrapped in a
+    // try/catch so one failure can't reject the whole batch.
+    // Mutating the shared Sets/Map from concurrent promise
+    // resolutions is safe because JS is single-threaded; the
+    // resolutions interleave, never literally race.
+    await Promise.all(cells.map(async (tileH3) => {
+      try {
+      const splatCached = gsplatTileCache.has(tileH3);
+      const meshCached = gsplatMeshTileCache.has(tileH3);
+      if (splatCached && meshCached) return;
+      const url = new URL('/xrpc/com.etzhayyim.apps.maps.getGsplatAsset', location.origin);
+      url.searchParams.set('tileH3', tileH3);
+      const res = await fetch(url.toString(), { credentials: 'same-origin' });
+      if (!res.ok) {
+        gsplatTileCache.add(tileH3);
+        gsplatMeshTileCache.add(tileH3);
+        return;
+      }
+      const meta = await res.json().catch(() => null);
+      if (!meta || meta.error) {
+        gsplatTileCache.add(tileH3);
+        gsplatMeshTileCache.add(tileH3);
+        return;
+      }
+      // Splat preview path with distance-based LOD streaming.
+      // The dumper writes the PLY opacity-descending so a Range
+      // fetch of the leading bytes returns the top-N quality
+      // splats. Three thresholds (15 / 30 / 60 m) → four LOD
+      // levels {1.0, 0.5, 0.25, 0.10}. Re-fetch + replace when
+      // the level changes (set_gsplat_asset is replace-by-name).
+      if (meta.signedUrl) {
+        const tileWorld = tileCentreWorld(tileH3);
+        const dx = tileWorld.x - h.x;
+        const dz = tileWorld.z - h.z;
+        const distM = Math.sqrt(dx * dx + dz * dz);
+        const targetLOD = lodForDistance(distM);
+        const currentLOD = gsplatLoadedLOD.get(tileH3) ?? 0;
+        const totalBytes = Number(meta.meta?.byteSize ?? 0);
+        // First load OR distance-change requires a level change.
+        const needFetch = !splatCached || (targetLOD > currentLOD * 1.01);
+        if (needFetch && totalBytes > 0) {
+          const targetBytes = lodEffectiveBytes(targetLOD, totalBytes);
+          // Whether we slice depends on bytes vs total — when the
+          // budget cap or fraction trims us, even targetLOD === 1.0
+          // can need Range (high-SH PLYs that exceed the 4 MB cap).
+          const wantSlice = targetBytes < totalBytes - 4;
+          try {
+            const init = { mode: 'cors', headers: {} };
+            if (wantSlice) {
+              init.headers['Range'] = `bytes=0-${targetBytes - 1}`;
+            }
+            const blob = await fetch(meta.signedUrl, init);
+            if (blob.ok || blob.status === 206) {
+              const buf = new Uint8Array(await blob.arrayBuffer());
+              try {
+                const n = set_gsplat_asset(tileH3, buf, meta.meta?.format ?? 'ply');
+                gsplatLoaded.add(tileH3);
+                gsplatLoadedLOD.set(tileH3, targetLOD);
+                if (window.__maps3d_debug) {
+                  console.debug('[maps3d] gsplat loaded',
+                                tileH3, 'lod=' + targetLOD, n, 'splats',
+                                buf.byteLength + '/' + totalBytes + ' B',
+                                'distM=' + distM.toFixed(1));
+                }
+              } catch (e) {
+                console.warn('[maps3d] set_gsplat_asset failed', tileH3, e);
+              }
+            }
+          } catch (e) {
+            if (window.__maps3d_debug) console.debug('[maps3d] gsplat blob fetch failed', e);
+          }
+        }
+        gsplatTileCache.add(tileH3);
+      }
+      // Baked mesh path (uncached only).
+      if (!meshCached && meta.bakedMeshUrl) {
+        try {
+          const glb = await fetch(meta.bakedMeshUrl, { mode: 'cors' });
+          if (glb.ok) {
+            const buf = new Uint8Array(await glb.arrayBuffer());
+            try {
+              set_mesh_tile(tileH3, buf);
+              gsplatMeshLoaded.add(tileH3);
+              if (window.__maps3d_debug) {
+                console.debug('[maps3d] gsplat-bake mesh loaded', tileH3,
+                              meta.bakedMesh?.triangleCount ?? '?', 'tris');
+              }
+            } catch (e) {
+              console.warn('[maps3d] set_mesh_tile (gsplat) failed', tileH3, e);
+            }
+          }
+        } catch (e) {
+          if (window.__maps3d_debug) console.debug('[maps3d] bake mesh fetch failed', e);
+        }
+        gsplatMeshTileCache.add(tileH3);
+      } else if (!meshCached) {
+        // No baked mesh yet — keep negative-cache short-lived so a
+        // user-triggered bake gets picked up on the next tick after
+        // the dumper completes.
+        // (cleared by user action via __maps3d_clearGsplatCache)
+      }
+      } catch (perTileErr) {
+        if (window.__maps3d_debug) {
+          console.debug('[maps3d] gsplat per-tile error', tileH3, perTileErr);
+        }
+      }
+    }));
+  } catch (e) {
+    if (window.__maps3d_debug) console.debug('[maps3d] gsplat fetch skipped', e);
+  }
+}
+window.__maps3d_clearGsplatCache = () => {
+  for (const t of gsplatLoaded)     { try { remove_gsplat_asset(t); } catch {} }
+  for (const t of gsplatMeshLoaded) { try { remove_mesh_tile(t); }   catch {} }
+  gsplatTileCache.clear();
+  gsplatMeshTileCache.clear();
+  gsplatLoaded.clear();
+  gsplatMeshLoaded.clear();
+  gsplatLoadedLOD.clear();
+};
+setInterval(fetchAndPushGsplatTiles, 4000);
+
+// ── "Train splat" + "Bake mesh" buttons + status polling ────────────
+// Train enqueues a Mapillary→COLMAP→gsplat job (auto-chains to bake by
+// default — autoBake=false to opt out). Bake operates on whatever
+// splat row already exists for the player's current tile. Both
+// buttons poll `getGsplatJobStatus` every 5 s and surface phase +
+// elapsed time in the toast until a terminal state.
+const trainBtn = document.getElementById('train-splat-btn');
+const bakeBtn  = document.getElementById('bake-splat-btn');
+const trainToast = document.getElementById('train-splat-toast');
+let _toastTimer = null;
+function showToast(msg, ms = 4000) {
+  trainToast.textContent = msg;
+  trainToast.style.display = 'block';
+  if (_toastTimer) clearTimeout(_toastTimer);
+  if (ms > 0) _toastTimer = setTimeout(() => { trainToast.style.display = 'none'; }, ms);
+}
+function pinToast(msg) { showToast(msg, 0); }
+
+const POLL_INTERVAL_MS = 5_000;
+const POLL_MAX_MS      = 30 * 60 * 1000;
+const TERMINAL = new Set(['completed', 'failed']);
+
+async function pollJobStatus(jobId, label, tileH3) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < POLL_MAX_MS) {
+    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+    let info = null;
+    try {
+      const res = await fetch(
+        '/xrpc/com.etzhayyim.apps.maps.getGsplatJobStatus?jobId=' + encodeURIComponent(jobId),
+        { credentials: 'same-origin' },
+      );
+      if (res.ok) info = await res.json().catch(() => null);
+    } catch {}
+    if (!info || info.error) {
+      pinToast(`${label} ${jobId}: pending…`);
+      continue;
+    }
+    const elapsed = ((Date.now() - startedAt) / 1000).toFixed(0);
+    const phase = info.phase || info.status;
+    pinToast(`${label} ${phase} · ${elapsed}s`);
+    if (TERMINAL.has(info.status)) {
+      if (info.status === 'completed') {
+        const detail = info.jobKind === 'train'
+          ? (info.splatCount ? `${info.splatCount.toLocaleString()} splats` : 'done')
+          : (info.triangleCount ? `${info.triangleCount.toLocaleString()} tris` : 'done');
+        showToast(`${label} done · ${detail}`, 8000);
+        // Drop negative-cache so the prefetch loop picks the new
+        // splat / mesh up on its next tick.
+        if (tileH3) {
+          gsplatTileCache.delete(tileH3);
+          gsplatMeshTileCache.delete(tileH3);
+        }
+      } else {
+        showToast(`${label} failed · ${info.message || 'see logs'}`, 12000);
+      }
+      return;
+    }
+  }
+  showToast(`${label} timed out polling — check kubectl logs`, 8000);
+}
+
+trainBtn?.addEventListener('click', async () => {
+  const h = window.__kami_hud_maps3d;
+  if (!h) { showToast('renderer not ready'); return; }
+  const ll = worldToLngLat(h.x, h.z);
+  trainBtn.disabled = true;
+  const oldLabel = trainBtn.textContent;
+  trainBtn.textContent = 'queueing…';
+  try {
+    const res = await fetch('/xrpc/com.etzhayyim.apps.maps.trainGsplatFromMapillary', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        lat: ll.lat, lng: ll.lng,
+        radiusM: 50, h3Resolution: 12,
+        maxImages: 80, priority: 'normal',
+        autoBake: true,
+      }),
+    });
+    if (!res.ok) { showToast(`train failed: HTTP ${res.status}`); return; }
+    const j = await res.json();
+    if (j.error) { showToast(`train failed: ${j.error}`); return; }
+    pinToast(`train ${j.tileH3} queued (~${(j.estimatedDurationSec/60).toFixed(0)} min)`);
+    pollJobStatus(j.trainJobId, 'train', j.tileH3);
+  } catch (e) {
+    showToast(`train error: ${e?.message ?? e}`);
+  } finally {
+    trainBtn.disabled = false;
+    trainBtn.textContent = oldLabel;
+  }
+});
+
+// ── Jobs HUD ─────────────────────────────────────────────────────────
+// Off by default. Toggle with `?jobs=1` or `window.__maps3d_jobs=true`.
+// Polls listGsplatJobs every 30s; renders 10 most recent rows.
+const jobsHud = document.getElementById('jobs-hud');
+const jobsRows = document.getElementById('jobs-hud-rows');
+const jobsEnabled = window.__maps3d_jobs === true
+  || new URLSearchParams(location.search).get('jobs') === '1';
+function relAge(iso) {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return '';
+  const dt = Math.max(0, (Date.now() - t) / 1000);
+  if (dt < 60)    return `${dt.toFixed(0)}s`;
+  if (dt < 3600)  return `${(dt/60).toFixed(0)}m`;
+  if (dt < 86400) return `${(dt/3600).toFixed(0)}h`;
+  return `${(dt/86400).toFixed(0)}d`;
+}
+function jobKindIcon(k) { return k === 'bake' ? '🔨' : '📷'; }
+const jobsCost = document.getElementById('jobs-hud-cost');
+async function refreshJobsCost() {
+  try {
+    const res = await fetch('/xrpc/com.etzhayyim.apps.maps.getGsplatCostSummary', {
+      credentials: 'same-origin',
+    });
+    if (!res.ok) return;
+    const j = await res.json().catch(() => null);
+    if (!j || !j.today || !j.last7d) return;
+    const fmt = (n) => '$' + (Number(n) || 0).toFixed(2);
+    jobsCost.innerHTML =
+      `<b>${fmt(j.today.totalUsd)}</b> today &middot; ` +
+      `${fmt(j.last7d.totalUsd)} 7d &middot; ` +
+      `${fmt(j.last30d.totalUsd)} 30d`;
+  } catch {}
+}
+async function refreshJobsHud() {
+  refreshJobsCost();  // fire-and-forget, runs in parallel
+  try {
+    const res = await fetch('/xrpc/com.etzhayyim.apps.maps.listGsplatJobs?limit=10', {
+      credentials: 'same-origin',
+    });
+    if (!res.ok) return;
+    const j = await res.json().catch(() => null);
+    if (!j || !Array.isArray(j.jobs)) return;
+    if (j.jobs.length === 0) {
+      jobsRows.textContent = '(no recent jobs)';
+      return;
+    }
+    jobsRows.innerHTML = '';
+    for (const row of j.jobs) {
+      const div = document.createElement('div');
+      div.className = 'row';
+      const tile = (row.tileH3 || '').slice(-6) || '·';
+      const phase = row.phase || row.status || '';
+      const status = row.status || 'queued';
+      const inner = document.createElement('span');
+      inner.className = 'tile'; inner.textContent = tile;
+      div.appendChild(inner);
+      const k = document.createElement('span');
+      k.className = 'kind'; k.textContent = jobKindIcon(row.jobKind);
+      div.appendChild(k);
+      const s = document.createElement('span');
+      s.className = 'status s-' + status;
+      s.textContent = status;
+      div.appendChild(s);
+      const p = document.createElement('span');
+      p.className = 'phase'; p.textContent = phase;
+      div.appendChild(p);
+      const a = document.createElement('span');
+      a.className = 'age'; a.textContent = relAge(row.ts);
+      div.appendChild(a);
+      jobsRows.appendChild(div);
+    }
+  } catch {}
+}
+if (jobsEnabled) {
+  jobsHud.style.display = 'block';
+  refreshJobsHud();
+  setInterval(refreshJobsHud, 30_000);
+}
+
+bakeBtn?.addEventListener('click', async () => {
+  const h = window.__kami_hud_maps3d;
+  if (!h) { showToast('renderer not ready'); return; }
+  const ll = worldToLngLat(h.x, h.z);
+  const tileH3 = latLngToCell(ll.lat, ll.lng, 12);
+  bakeBtn.disabled = true;
+  const oldLabel = bakeBtn.textContent;
+  bakeBtn.textContent = 'queueing…';
+  try {
+    const res = await fetch('/xrpc/com.etzhayyim.apps.maps.bakeGsplatAsset', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ tileH3, priority: 'normal' }),
+    });
+    if (!res.ok) { showToast(`bake failed: HTTP ${res.status}`); return; }
+    const j = await res.json();
+    if (j.error) { showToast(`bake failed: ${j.error}`); return; }
+    pinToast(`bake ${j.tileH3 || tileH3} queued`);
+    pollJobStatus(j.bakeJobId, 'bake', j.tileH3 || tileH3);
+  } catch (e) {
+    showToast(`bake error: ${e?.message ?? e}`);
+  } finally {
+    bakeBtn.disabled = false;
+    bakeBtn.textContent = oldLabel;
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+boto3==1.40.7
+psycopg2-binary==2.9.10
+pyarrow==23.0.1
+gtfs-realtime-bindings==1.0.0
+websockets==13.1
+aiohttp==3.14.1
+scikit-learn==1.6.1
+numpy==2.2.1
+sentence-transformers==3.4.1
+h3==4.5.0  # ADR-2606064500 R2: stamps the :feature.cell/* spatial index in kotoba mode

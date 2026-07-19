@@ -1,0 +1,125 @@
+# maps-bulk-ingest-gtfs-jp — resident worker pod
+#
+# Downloads per-prefecture GTFS-JP feeds (gtfs.jp aggregator + per-agency
+# mirrors), parses routes/stops/trips/stop_times/calendar, INSERTs into
+# RisingWave vertex_spatial as Railway / BusRoute / Station / BusStop.
+#
+# Sized for the curated default feed list (Tokyo Metro / Toei / JR West /
+# Chuo Bus). A full 47-prefecture index needs more memory; bump requests
+# and supply GTFS_JP_FEED_INDEX_URL.
+#
+# Feed index is mounted from ConfigMap gtfs-jp-feed-index at /config/gtfs-jp.json.
+# To add feeds: edit the ConfigMap data below and re-apply with kubectl apply -f.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gtfs-jp-feed-index
+  namespace: maps-bulk-ingest
+data:
+  gtfs-jp.json: |
+    [
+      {
+        "feed_id": "yamanashi",
+        "agency": "Yamanashi Bus",
+        "prefecture": "Yamanashi",
+        "url": "http://opendata.busmaps.jp/yamanashi.zip"
+      },
+      {
+        "feed_id": "kobe-subway",
+        "agency": "Kobe Municipal Subway",
+        "prefecture": "Hyogo",
+        "url": "http://codeforkobe.github.io/kobe-transit/kobe_subway_gtfs.zip"
+      },
+      {
+        "feed_id": "unobus",
+        "agency": "Uno Bus",
+        "prefecture": "Okayama",
+        "url": "http://www3.unobus.co.jp/opendata/GTFS-JP.zip"
+      },
+      {
+        "feed_id": "nagai",
+        "agency": "Nagai Transport",
+        "prefecture": "Gunma",
+        "url": "https://www.nagai-unyu.net/rosen/GTFS/nagai/GTFS-JP_nagaibus-gunma-jp.zip"
+      }
+    ]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bulk-ingest-gtfs-jp
+  namespace: maps-bulk-ingest
+  labels:
+    app.kubernetes.io/name: bulk-ingest-gtfs-jp
+    app.kubernetes.io/part-of: maps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bulk-ingest-gtfs-jp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bulk-ingest-gtfs-jp
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      volumes:
+        - name: feed-index
+          configMap:
+            name: gtfs-jp-feed-index
+
+      tolerations:
+        - key: "workload"
+          operator: "Equal"
+          value: "osm-ingest"
+          effect: "NoSchedule"
+      containers:
+        - name: dumper
+          image: ghcr.io/etzhayyim/maps-bulk-ingest:1.2.0
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/app/workers/gtfs_jp_dumper.py"]
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - secretRef:
+                name: maps-bulk-ingest-credentials
+          env:
+            - name: B2_PREFIX
+              value: maps-bulk-ingest/gtfs-jp
+            - name: GTFS_JP_FEED_INDEX_URL
+              value: file:///config/gtfs-jp.json
+          volumeMounts:
+            - name: feed-index
+              mountPath: /config
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+              ephemeral-storage: 5Gi
+            limits:
+              cpu: 2
+              memory: 4Gi
+              ephemeral-storage: 10Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bulk-ingest-gtfs-jp
+  namespace: maps-bulk-ingest
+spec:
+  selector:
+    app.kubernetes.io/name: bulk-ingest-gtfs-jp
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http

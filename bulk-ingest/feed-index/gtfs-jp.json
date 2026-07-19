@@ -1,0 +1,26 @@
+[
+  {
+    "feed_id": "yamanashi",
+    "agency": "Yamanashi Bus",
+    "prefecture": "Yamanashi",
+    "url": "http://opendata.busmaps.jp/yamanashi.zip"
+  },
+  {
+    "feed_id": "kobe-subway",
+    "agency": "Kobe Municipal Subway",
+    "prefecture": "Hyogo",
+    "url": "http://codeforkobe.github.io/kobe-transit/kobe_subway_gtfs.zip"
+  },
+  {
+    "feed_id": "unobus",
+    "agency": "Uno Bus",
+    "prefecture": "Okayama",
+    "url": "http://www3.unobus.co.jp/opendata/GTFS-JP.zip"
+  },
+  {
+    "feed_id": "nagai",
+    "agency": "Nagai Transport",
+    "prefecture": "Gunma",
+    "url": "https://www.nagai-unyu.net/rosen/GTFS/nagai/GTFS-JP_nagaibus-gunma-jp.zip"
+  }
+]

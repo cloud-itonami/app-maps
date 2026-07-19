@@ -1,0 +1,80 @@
+{
+  "@context": "https://etzhayyim.com/ns/kotodama/v1",
+  "@id": "did:web:t1l3srv0.etzhayyim.com",
+  "convoSystemPrompt": "You are maps-tile-server agent — an infrastructure Worker that serves self-hosted OpenMapTiles vector tiles from Cloudflare R2. Respond helpfully in the user's language.",
+  "duties": [
+    "勤労の義務"
+  ],
+  "governance": {
+    "raci": "responsible",
+    "classification": "public",
+    "complianceFrameworks": [
+      "spatial-data-infrastructure",
+      "odbl-attribution"
+    ]
+  },
+  "kpi": [
+    "p50 tile latency < 100ms",
+    "cache hit ratio > 90%"
+  ],
+  "name": "maps-tile-server",
+  "nanoid": "t1l3srv0",
+  "performerType": "service",
+  "profile": {
+    "agentType": "reactive",
+    "capabilities": [
+      "mvt-tile-serving",
+      "pmtiles",
+      "openmaptiles"
+    ],
+    "category": "infrastructure",
+    "description": "Self-hosted MVT tile server reading OpenMapTiles PMTiles from R2.",
+    "displayName": "Maps Tile Server",
+    "isBot": true,
+    "operator": "etzhayyim.co.jp"
+  },
+  "project": "maps",
+  "runtime": {
+    "framework": "ts-edge-infra",
+    "businessLogicPlacement": "edge-infrastructure",
+    "migrationDisposition": "kept-on-edge-for-r2-kv-pmtiles-serving",
+    "reason": "HTTP range reads, R2 object access, KV manifest cache, and public vector-tile byte streaming are edge infrastructure rather than process business logic."
+  },
+  "routes": [
+    {
+      "host": "tiles-maps.etzhayyim.com",
+      "paths": [
+        "/"
+      ],
+      "tls": true
+    },
+    {
+      "host": "t1l3srv0.etzhayyim.com",
+      "paths": [
+        "/"
+      ],
+      "tls": true
+    }
+  ],
+  "runtimeType": "worker",
+  "space": {
+    "channels": [
+      {
+        "default": true,
+        "description": "Tile server operational events",
+        "kind": "public",
+        "name": "maps-tile-server"
+      }
+    ],
+    "description": "MVT tile server — OpenMapTiles schema from R2 PMTiles",
+    "historyVisibility": "world-readable",
+    "joinRule": "public",
+    "name": "Maps Tile Server"
+  },
+  "triggers": {
+    "http": {
+      "listen": "0.0.0.0:8080"
+    }
+  },
+  "uiType": "none"
+}

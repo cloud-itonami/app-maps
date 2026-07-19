@@ -1,0 +1,112 @@
+;; kotoba-datomic-projection manifest for maps-ui-uqpel6i6
+;;
+;; Per ADR-2605231500, this directory's Kysely / RW reads are a derived
+;; read-path cache, not canonical state. Canonical state lives on:
+;;   - com.etzhayyim.maps.* records in the maps.etzhayyim.com PDS (MST)
+;;   - content blobs in IPFS (gsplat PLY/GLB, KAMI bake outputs)
+;;   - Base L2 anchor (MST root commitments, post-Phase 6)
+;;
+;; This manifest exempts the storage-substrate lint rule for files under
+;; this directory. The exemption is conditional on the rebuild runbook below
+;; remaining executable.
+
+{:projection/name "maps-spatial-rw"
+ :projection/level :l0-projection
+ :projection/rebuild-runbook "../../tools/rebuild-spatial-projection.md"
+ :projection/adr "2605231500"
+ :projection/kotoba-companion-adr "2605231400"
+ :projection/related-migration "60-apps/etzhayyim-project-maps/MIGRATION-TODO.md"
+ :projection/owner "maps-ui maintainers"
+ :projection/last-reviewed "2026-05-23"
+
+ :projection/source-collections
+ ["com.etzhayyim.maps.feature"
+  "com.etzhayyim.maps.adminArea"
+  "com.etzhayyim.maps.region"
+  "com.etzhayyim.maps.geoAlias"
+  "com.etzhayyim.maps.source"
+  "com.etzhayyim.maps.displayLayer"
+  "com.etzhayyim.maps.spot"
+  "com.etzhayyim.maps.river"
+  "com.etzhayyim.maps.lake"
+  "com.etzhayyim.maps.coastline"
+  "com.etzhayyim.maps.mountain"
+  "com.etzhayyim.maps.maritimeZone"
+  "com.etzhayyim.maps.road"
+  "com.etzhayyim.maps.railway"
+  "com.etzhayyim.maps.seaRoute"
+  "com.etzhayyim.maps.airRoute"
+  "com.etzhayyim.maps.busRoute"
+  "com.etzhayyim.maps.waterway"
+  "com.etzhayyim.maps.port"
+  "com.etzhayyim.maps.airport"
+  "com.etzhayyim.maps.station"
+  "com.etzhayyim.maps.busStop"
+  "com.etzhayyim.maps.parking"
+  "com.etzhayyim.maps.evCharger"
+  "com.etzhayyim.maps.building"
+  "com.etzhayyim.maps.buildingFloor"
+  "com.etzhayyim.maps.physicalAsset"
+  "com.etzhayyim.maps.twinState"
+  "com.etzhayyim.maps.deviceBinding"
+  "com.etzhayyim.maps.sensor"
+  "com.etzhayyim.maps.sensorReading"
+  "com.etzhayyim.maps.trip"
+  "com.etzhayyim.maps.stopTime"
+  "com.etzhayyim.maps.vehiclePosition"
+  "com.etzhayyim.maps.tripUpdate"
+  "com.etzhayyim.maps.serviceAlert"
+  "com.etzhayyim.maps.gsplatAsset"
+  "com.etzhayyim.maps.gsplatMesh"
+  "com.etzhayyim.maps.gsplatJob"
+  "com.etzhayyim.maps.visionResult"
+  "com.etzhayyim.maps.satelliteScene"
+  "com.etzhayyim.maps.mapralyPoi"
+  "com.etzhayyim.maps.webCrawlGeoEntity"
+  "com.etzhayyim.maps.postLocation"
+  "app.bsky.feed.post"]
+
+ :projection/tables
+ ["vertex_spatial"
+  "vertex_spatial_count"
+  "vertex_maps_building_"
+  "vertex_maps_gsplat_asset"
+  "vertex_maps_gsplat_job"
+  "vertex_maps_gsplat_mesh"
+  "vertex_maps_social_profile"
+  "vertex_maps_stop_time"
+  "vertex_maps_trip"
+  "vertex_maps_vehicle_position"
+  "vertex_maps_trip_update"
+  "vertex_maps_service_alert"
+  "vertex_legal_entity"
+  "vertex_osm_element"
+  "vertex_vessel"]
+
+ :projection/materialized-views
+ ["mv_maps_recent_vehicle_position"
+  "mv_maps_recent_trip_update"
+  "mv_maps_active_alerts"
+  "mv_maps_gsplat_job_latest"]
+
+ :projection/storage-substrates
+ [{:kind :risingwave
+   :binding "HYPERDRIVE"
+   :note "primary projection - append-only INSERT via Kysely"}
+  {:kind :r2
+   :binding "YATA_R2"
+   :note "edge cache for tile / blob fallback"}
+  {:kind :b2
+   :note "gsplat PLY/GLB content-addressed - migrates to IPFS in MIGRATION-TODO Phase 2"}]
+
+ :projection/rebuild-estimated-minutes 240
+ :projection/rebuild-estimated-minutes-note
+ "dominated by vertex_spatial (~10M rows) + GTFS feeds (~5M stop_times) + 6 month gsplat job log replay"
+
+ :projection/non-determinism
+ [{:field "vertex_spatial.row_id"
+   :reason "sequence-allocated on INSERT; replays produce same logical row, different physical ID"}
+  {:field "vertex_maps_*.created_at_db"
+   :reason "RW server timestamp at INSERT time, not in source record"}
+  {:field "mv_maps_recent_*.materialized_at"
+   :reason "streaming MV refresh timestamp; not a function of source"}]}

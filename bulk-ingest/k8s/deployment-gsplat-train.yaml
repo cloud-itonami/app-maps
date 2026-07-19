@@ -1,0 +1,80 @@
+# no-server-key: read-only — pending Stage A-E member-signed-writes refactor per ADR-2605231525
+# maps-bulk-ingest-gsplat-train — Mapillary → COLMAP+gsplat (RunPod) → B2 → RW.
+# ADR-2605092800.
+#
+# Gated: replicas=0 by default. Operator scales up after wiring:
+#   * MAPILLARY_ACCESS_TOKEN          (graph.mapillary.com OAuth)
+#   * RUNPOD_API_KEY                  (RunPod Serverless)
+#   * RUNPOD_ENDPOINT_ID_GSPLAT       (Phase 1 stub or Phase 2 real)
+#   * B2_*                            (already in maps-bulk-ingest-credentials)
+#   * DATABASE_URL                    (RisingWave Hyperdrive PG)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bulk-ingest-gsplat-train
+  namespace: maps-bulk-ingest
+  labels:
+    app.kubernetes.io/name: bulk-ingest-gsplat-train
+    app.kubernetes.io/part-of: maps
+spec:
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bulk-ingest-gsplat-train
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bulk-ingest-gsplat-train
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+
+      tolerations:
+        - key: "workload"
+          operator: "Equal"
+          value: "osm-ingest"
+          effect: "NoSchedule"
+      containers:
+        - name: dumper
+          image: ghcr.io/etzhayyim/maps-bulk-ingest:1.3.0
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/app/workers/gsplat_train_dumper.py"]
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - secretRef:
+                name: maps-bulk-ingest-credentials
+          env:
+            - name: B2_PREFIX
+              value: maps-bulk-ingest/gsplat
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+              ephemeral-storage: 2Gi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+              ephemeral-storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bulk-ingest-gsplat-train
+  namespace: maps-bulk-ingest
+spec:
+  selector:
+    app.kubernetes.io/name: bulk-ingest-gsplat-train
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http

@@ -1,0 +1,79 @@
+# maps-bulk-ingest-aismarine-noaa — daily NOAA MarineCadastre AIS bulk ingest.
+#
+# ADR-2605011500 §Addendum 2026-05-05 (Phase 1.1, no-API-key path).
+#
+# Runs once per day at 06:30 UTC (NOAA typically publishes T-1 by then).
+# Default behavior (TARGET_DATE empty): scan T-2..T-16 for the most recent
+# published file, download, decimate per-MMSI to 1 row / 10 min, INSERT into
+# vertex_vessel_position + vertex_vessel.
+#
+# Coverage: U.S. coastal + EEZ. ~600K-1M positions/day after decimation.
+#
+# To run on demand against a specific date:
+#   kubectl -n maps-bulk-ingest create job --from=cronjob/bulk-ingest-aismarine-noaa \
+#     bulk-ingest-aismarine-noaa-manual-2024-01-15
+#   kubectl -n maps-bulk-ingest set env job/bulk-ingest-aismarine-noaa-manual-2024-01-15 \
+#     TARGET_DATE=2024-01-15
+#
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: bulk-ingest-aismarine-noaa
+  namespace: maps-bulk-ingest
+  labels:
+    app.kubernetes.io/name: bulk-ingest-aismarine-noaa
+    app.kubernetes.io/part-of: maps
+spec:
+  # 06:30 UTC daily — NOAA publishes T-1 around 18:00 UTC the prior day.
+  schedule: "30 6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  startingDeadlineSeconds: 7200
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 14400  # 4h hard cap (download + parse + write)
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: bulk-ingest-aismarine-noaa
+        spec:
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: ghcr-pull
+          containers:
+            - name: dumper
+              image: ghcr.io/etzhayyim/maps-bulk-ingest:1.3.1
+              imagePullPolicy: IfNotPresent
+              command: ["python", "/app/workers/noaa_ais_dumper.py"]
+              envFrom:
+                - secretRef:
+                    name: maps-bulk-ingest-credentials
+              env:
+                - name: SAMPLE_INTERVAL_S
+                  value: "600"      # 10-min decimation per MMSI
+                - name: BATCH_SIZE
+                  value: "5000"
+                - name: DML_RATE_LIMIT
+                  value: "5000"
+                - name: MAX_LOOKBACK_DAYS
+                  value: "16"
+                - name: HTTP_TIMEOUT_S
+                  value: "600"
+                - name: TMP_DIR
+                  value: /tmp
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+                limits:
+                  cpu: 2000m
+                  memory: 4Gi
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir:
+                sizeLimit: 16Gi

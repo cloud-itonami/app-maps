@@ -1,1 +1,6 @@
-{:schema "etzhayyim.repository/readme-v1" :name "com-etzhayyim-app-maps" :kind :application :source "etzhayyim/root/60-apps/etzhayyim-project-maps"}
+{:schema "etzhayyim.repository/readme-v1"
+ :name "app-maps"
+ :kind :application
+ :source "etzhayyim/root/60-apps/etzhayyim-project-maps"
+ :boundary {:role :spatial-intelligence-application
+            :standalone-actor "cloud-itonami/maps"}}

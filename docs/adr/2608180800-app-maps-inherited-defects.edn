@@ -1,0 +1,63 @@
+[{:db/id -1
+  :adr/id "ADR-2608180800"
+  :adr/title "app-maps: nine files that do not parse, a published Mapillary token, and a suite that runs one placeholder"
+  :adr/status "accepted"
+  :adr/date "2026-08-18"
+  :adr/repo "cloud-itonami/app-maps"
+  :adr/context
+  "This repository had no README.md. A cold reader's only entry points were README.edn (6 lines of EDN metadata) and CLAUDE.md, a 48,528-byte pre-extraction design record whose first line declares the actor migrated elsewhere and whose relative links point back into the monorepo it came from. Writing that entry point required measuring what is actually here, and the measurement turned up four things an owner has to decide about. None of them were changed in this commit; all are recorded here with the evidence, because each needs a decision that documentation cannot make.
+
+Everything below was measured on 2026-08-18 from a fresh clone, macOS 15 / node v26.3.0 / npm 11.16.0 / python 3.14.5. Custody was verified first: all 211 non-canonical blobs match etzhayyim/root@45b5906 60-apps/etzhayyim-project-maps path-for-path and SHA-for-SHA, so nothing here was introduced by the extraction."
+  :adr/decision
+  "1. LEAVE the committed Mapillary token in place and escalate it, rather than delete the lines. MAPILLARY_ACCESS_TOKEN appears in cleartext in two tracked files of this public repository: appview/maps-ui-uqpel6i6/wrangler.jsonc:24 and appview/maps-ui-uqpel6i6/kotodama.jsonld:7. Deleting them does not un-publish the value; it only makes the exposure harder to find while it stays valid. What ends it is rotation at Mapillary plus re-issue through the secrets_store_secrets binding the same wrangler.jsonc already uses for 21 other secrets. That is an owner action against an external account, so this commit reports it and does not touch it. docs/verify-docs-claims.cljs asserts the count is 2 -- and asserts it by location and count only, never printing the value.
+
+2. DO NOT repair the nine unparseable files here; fix upstream first. Nine of the 94 tracked TypeScript files contain kotoba-datomic in identifier position, e.g. `import { kotoba-datomic } from \"@etzhayyim/sdk\"` and `type FleetCell = kotoba-datomic.FleetCell`. A JavaScript identifier cannot contain a hyphen. Two independent parsers agree on exactly the same nine files: esbuild 0.28.2 rejects each with `Expected \"}\" but found \"-\"`, and `tsc --noEmit` exits 2 with 47 errors, all TS1005 / TS1128 / TS1434, all inside those nine. The correct spelling is not ambiguous -- the SDK exports the namespace as kotobaDatomic (etzhayyim/com-etzhayyim-sdk@12314a0c, src/index.ts:629: `export * as kotobaDatomic from \"./kotoba-datomic/index.js\"`). The nine files use the directory name where the export name belongs, the signature of a kebab-case rename that reached code as well as prose. It is not repaired here for two reasons. First, the identical broken lines exist upstream at the pinned revision, so fixing only this copy makes this repository diverge from the source migration.edn says it is a faithful copy of. Second, the fix cannot be verified end-to-end here, because @etzhayyim/sdk cannot be installed at all (decision 3), and shipping an unverifiable source change is worse than shipping a documented defect.
+
+3. TREAT both install failures as upstream, because neither is fixable inside this repository. `npm install` in kotoba/ fails EALLOWSCRIPTS 'git dep preparation failed': @etzhayyim/sdk@0.1.0-alpha declares main ./dist/index.js and types ./dist/index.d.ts, commits no dist/, and builds it from `prepare: tsc`, which npm 11 refuses to run for a project-scoped git dependency. That is the same upstream cause app-live recorded in its docs/adr/2608180536, so this ADR cites it rather than duplicating the options. `npm install` in appview/maps-ui-uqpel6i6/svelte/ fails EUNSUPPORTEDPROTOCOL on `workspace:*`: two dependencies declare it and zero tracked package.json in this repository declares `workspaces`.
+
+4. DO NOT widen the vitest include glob as a repair. kotoba/package.json declares `test: vitest run`; running it yields `Test Files 1 passed (1) / Tests 1 passed (1)`, because kotoba/vitest.config.ts sets include: [\"test/**/*.test.ts\"] and kotoba/test/ holds one 155-byte file whose only case is expect(true).toBe(true). The 18 real suites live under kotoba/src/ and are never collected. Widening the glob looks like a one-line fix and is not one: pointed at src/**, the result is `Test Files 11 failed | 7 passed (18) / Tests 235 passed (235)`, so the committed config would go from green-and-empty to red. Landing that is a decision about what this repository's CI signal should mean, not a formatting change."
+  :adr/consequences
+  "The repository now states its own condition in README.md, and both statements are machine-checked: docs/verify-docs-claims.cljs (19 checks) and docs/verify-custody.cljs. Both exit 3 -- not 0 and not 1 -- when they cannot answer, so an unauthenticated gh, an offline run, or a truncated GitHub tree response cannot read as a clean result. Neither verifier checks DNS, deliberately: an offline lookup returns the same value as a lookup that found nothing, so 'no network' would be recorded as 'the host is gone'. The six unresolvable hostnames are documented in operator-quickstart.md §6 with the command for a human to run.
+
+What stays broken and visible: nine files that do not compile, one published token, two Workers that cannot be built or deployed, and a suite whose declared entry point exercises nothing. Each is now findable in one place instead of requiring a reader to run the toolchain to discover it.
+
+The strongest evidence for decision 2 is a measurement, not a judgement. On a throwaway copy with kotoba-datomic renamed to kotobaDatomic, parse errors drop from 7 to 0 and the suite result does not move: still `11 failed | 7 passed`, with all 11 failures now reading `Cannot find package '@etzhayyim/sdk'`. tsc on that copy goes from 47 syntax errors to 89 semantic ones (22 TS2307, 22 TS2305, 36 TS7006, 7 TS2339, 1 TS2724, 1 TS2694). So the rename alone buys no green test, and at least one suite would still fail on its own merits: kotoba/src/feature/geography.test.ts imports registerAdminArea, registerCoastline, registerLake, registerMaritimeZone, registerRiver, registerSpot and listFeatures from ./index.js, and none of those seven names appear anywhere in kotoba/src/feature/ outside test files -- the module exports three register* functions. That test was written against an API larger than the module has."
+  :adr/evidence
+  "{:tracked 219
+    :tracked-before-docs 213
+    :custody {:upstream \"etzhayyim/root@45b590633285a1988b399c0ab49a7ac56614015f\"
+              :path \"60-apps/etzhayyim-project-maps\"
+              :subtree \"2ca0c1bc695492c416b5ba67d2713ea3d3c378cb\"
+              :blobs 211 :result :identical-path-and-sha
+              :note \"the whole-monorepo recursive tree call returns truncated:true; the subtree call returns false. Only the subtree answer was used\"}
+    :typescript {:scanned 94 :parse-failures 9
+                 :parsers [\"esbuild 0.28.2\" \"tsc --noEmit\"]
+                 :agree? true
+                 :tsc {:exit 2 :errors 47 :codes {\"TS1005\" 29 \"TS1434\" 9 \"TS1128\" 9}}}
+    :vitest {:declared {:files-passed 1 :tests-passed 1}
+             :src-glob {:files-failed 11 :files-passed 7 :tests-passed 235 :tests-failed 0}
+             :passing-suites {\"collection/types\" 45 \"source/types\" 48 \"geo/types\" 40
+                              \"registry/types\" 38 \"feature/types\" 24 \"display-layer/types\" 21
+                              \"twin/types\" 19}
+             :kotoba-readme-claim \"235/235 vitest passing; per-topic table source 53 / geo 45 / display-layer 21 / registry 38 / collection 45 / feature 33, omits twin\"}
+    :rename-probe {:parse-errors-before 7 :parse-errors-after 0
+                   :suites-after \"11 failed | 7 passed\"
+                   :all-failures \"Cannot find package '@etzhayyim/sdk'\"
+                   :tsc-after {:errors 89 :TS2307 22 :TS2305 22 :TS7006 36 :TS2339 7 :TS2724 1 :TS2694 1}}
+    :installs {\"kotoba/\" :EALLOWSCRIPTS
+               \"appview/maps-ui-uqpel6i6/svelte/\" :EUNSUPPORTEDPROTOCOL
+               \"appview/maps-tile-server-t1l3srv0/\" {:result :ok :packages 2 :tsc-exit 0 :tsc-errors 0}}
+    :maps-ui-wrangler {:alias-entries 8 :absolute-path-targets 8 :targets-existing-here 0
+                       :root \"/Users/junkawasaki/github/etzhayyim-apps-etzhayyimcojp\"}
+    :dns {:nxdomain [\"maps.etzhayyim.com\" \"uqpel6i6.etzhayyim.com\" \"tiles-maps.etzhayyim.com\"
+                     \"t1l3srv0.etzhayyim.com\" \"mcp.etzhayyim.com\" \"maps-langserver.etzhayyim.com\"]
+          :resolves [\"etzhayyim.com\"]}
+    :python {:files 21 :compile-failures 0 :interpreter \"3.14.5\" :note \"compiled, not run\"}
+    :untested {:appview-src-tests {:files 5 :cases 23 :runner :none}
+               :playwright-e2e {:files 5 :cases 22 :runner-declared :none}}}"
+  :adr/not-done
+  "Nothing was deployed and nothing could have been: both Workers are unbuildable and all four of their declared routes are NXDOMAIN. The Python pods were compiled, not executed -- requirements.txt was not installed and none of the 13 Kubernetes manifests were applied, so nothing here says whether the dumpers work against live sources. The nine unparseable files were not repaired (decision 2), the vitest glob was not widened (decision 4), the Mapillary token was not deleted (decision 1), and the sdk packaging problem was not filed upstream, because app-live's docs/adr/2608180536 already records the options. kotoba/README.md's per-topic table was left as-is: correcting it means deciding whether the 11 dead suites are counted, which is the same decision as 4. CLAUDE.md's monorepo-relative links were not repaired, because fixing them means deciding whether this repository keeps citing the monorepo or becomes self-contained.
+
+The maturity axis raised this round was docs. axis-test was not raised and could not honestly have been: the fleet scanner counts only #{cljc cljs clj kotoba} under a top-level src/ or test/, so this repository's TypeScript and Python suites are structurally invisible to it, and adding .cljc files to move the counter would be padding. axis-ingest was not raised either -- listing URLs to move a counter is fabrication."
+  :adr/supersedes ""
+  :source/dataset "adr"}]

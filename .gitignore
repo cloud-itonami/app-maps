@@ -1,0 +1,14 @@
+# Toolchain installed by docs/operator-quickstart.md §2.
+#
+# The quickstart tells you to copy a scratch node_modules into kotoba/ and to
+# run `npm install` inside appview/maps-tile-server-t1l3srv0/. Without this
+# file a later `git add -A` stages those trees, which inflates the tracked
+# file count and makes docs/verify-custody.cljs report a false divergence.
+node_modules/
+__pycache__/
+*.pyc
+.svelte-kit/
+build/
+dist/
+.vite/
+test-results/

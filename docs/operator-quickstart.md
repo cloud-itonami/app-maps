@@ -105,15 +105,27 @@ it. The Worker still cannot be **deployed** — see §6.
 
 ## 5. The Python pods
 
+Run this from the repository root, not from `bulk-ingest/` — two of the 21
+Python files (`runpod-endpoint/handler.py`, `runpod-endpoint-gsplat/handler.py`)
+live outside it, and from inside `bulk-ingest/` you only see 19:
+
 ```bash
-cd bulk-ingest
-git ls-files '*.py' | while read -r f; do python3 -m py_compile "$f" || echo "FAIL $f"; done
-# all 21 files compile
+git ls-files '*.py' > /tmp/pyf.txt
+wc -l < /tmp/pyf.txt      # 21
+while IFS= read -r f; do python3 -m py_compile "$f" || echo "FAIL $f"; done < /tmp/pyf.txt
+# no FAIL lines: all 21 compile
+find . -name __pycache__ -prune -exec rm -rf {} +
 ```
+
+Use a `while read` loop rather than `for f in $(...)`: zsh does not word-split
+unquoted expansions, so the `for` form passes the whole list as one filename
+and `py_compile` reports a single bogus failure. That happened while writing
+this page.
 
 Compiling is not running. `requirements.txt` was not installed on this walk and
 no pod was executed, so nothing here is a statement about whether the dumpers
-work against live sources. `k8s/` holds 13 manifests; none were applied.
+work against live sources. `bulk-ingest/k8s/` holds 13 manifests; none were
+applied.
 
 ## 6. Deployment — not attempted, and why
 

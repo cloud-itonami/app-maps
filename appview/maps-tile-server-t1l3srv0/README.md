@@ -1,113 +1,94 @@
 # maps-tile-server (nanoid `t1l3srv0`)
 
-Self-hosted MVT tile server reading **OpenMapTiles**-schema **PMTiles** from
-Cloudflare R2. Serves standard Mapbox Vector Tiles over
-`https://tiles.maps.etzhayyim.com/v1/{z}/{x}/{y}.pbf`.
+**この appview は 2026-08-19 に TypeScript/Svelte から ClojureScript へ移行した**
+（[`../../docs/adr/0001-migrate-the-appview-from-typescript-to-clojurescript.edn`](../../docs/adr/0001-migrate-the-appview-from-typescript-to-clojurescript.edn)）。
+このページは移行前の内容を保存したものではない —— 移行前の記述は、deploy された
+ことの無い実装を「Routes」として説明していた。git 履歴に残っている。
 
-## Routes
+## deploy されるものは、いま読んでいるソースである
 
-| Path | Purpose |
+```
+../../src/maps/tile/route.cljc    判断（どの handler が答えるか） ← 純 .cljc、テスト対象
+../../src/maps/tile/view.cljc     ページ（jp-go-dds の hiccup）   ← 純 .cljc、テスト対象
+../../src/maps/tile/worker.cljs   Request/Response に触る唯一の層
+        ↓ shadow-cljs :target :esm
+../../dist/worker.js              ← wrangler.jsonc の "main" が指すもの
+```
+
+移行前の `main` は `svelte/.svelte-kit/cloudflare/_worker.js` を指していた。
+**その dir は tree に無い**（`.gitignore` が `.svelte-kit/` を無視している）。
+一方で読み手が開く `src/app.ts` は**どの bundle にも入っていなかった**。
+
+## この Worker が答えるもの
+
+| METHOD | PATH | 何をするか | 出自 |
+|---|---|---|---|
+| GET | `/` | この appview の説明ページ（route 表と env のキーを描く） | 移行前から |
+| POST | `/xrpc/:nsid` | XRPC を MCP router へ中継する | 移行前から |
+| OPTIONS | `/xrpc/*` | CORS preflight | 移行前から |
+| GET | `/health` | 生存確認 JSON | **移行で追加** |
+
+出所は `../../src/maps/tile/route.cljc` の `routes` で、**ページもそこから描く**。
+移行前のページは `routeCount: 0` / `routes: []` / `vars: []` を literal で持って
+おり、隣の `wrangler.jsonc` が route 2 パターン・var 11 を宣言していることに
+気づけなかった。
+
+`/health` は移行前の SvelteKit には**無かった**（`src/app.ts` は宣言していたが、
+それは deploy されていない）。移してきたものではなく足したものなので、route 表の
+`:route/origin` が `:added` と持ち、ページにもそう出る。
+
+## この Worker が答えないもの（黙って消していない）
+
+`src/app.ts`（284 行）と `src/pmtiles.ts`（402 行）は MVT タイル配信 —— PMTiles v3
+ヘッダ解析、Hilbert 曲線の `(z,x,y) → tile_id`、ディレクトリ varint デコーダ、
+R2 の range read —— を実装していた。**移していない。**
+
+| PATH | 理由（実測） |
 |---|---|
-| `GET /v1/{z}/{x}/{y}.pbf`  | MVT tile bytes (OpenMapTiles schema). 204 on missing. |
-| `GET /v1/manifest.json`     | Current PMTiles version + build metadata. |
-| `GET /v1/style.json`        | Minimal MapLibre style (kami-bridge ignores it). |
-| `GET /health`               | `{ok:true}` |
-| `GET /`                     | Capability summary. |
+| `/v1/{z}/{x}/{y}.pbf` | R2 binding `TILES` が `wrangler.jsonc` に無い |
+| `/v1/manifest.json` | R2 binding `TILES` / KV binding `TILE_MANIFEST` が無い |
+| `/v1/style.json` | KV binding `TILE_MANIFEST` が無い |
+| `/_worker/health` | `src/app.ts` の別名 health。`/health` に一本化した |
+| `/_app/meta` | `src/app.ts` の capability 要約。`/` が同じ役割を果たす |
 
-## Bindings (`wrangler.jsonc`)
+`wrangler.jsonc` には `r2_buckets` も `kv_namespaces` も**1 つも無い**。つまり
+このコードは deploy されたことが無く、deploy しても binding が無くて動かない。
+動かない経路を移植して「移行済み」と言わないための除外である。表そのものは
+`route.cljc` の `withheld` に理由付きで残っており、ページにも出る。復活させる
+なら binding の宣言と PMTiles の実在が先で、それは別の決定である。
 
-| Binding | Kind | Resource |
+`TILE_MANIFEST_KEY` / `TILE_MANIFEST_TTL_SECONDS` / `TILE_ATTRIBUTION` の 3 つの
+var は、その動かない経路が読むはずだった値である。**移行では消していない** ——
+今日は誰も読まないが、移行前も読んでいなかった。
+
+## 到達性（移行では直らない）
+
+| ホスト | 役割 | DNS |
 |---|---|---|
-| `TILES`          | R2  | `etzhayyim-maps-tiles` |
-| `TILE_MANIFEST`  | KV  | `maps-tile-manifest` (60 s TTL cache of `manifest.json`) |
+| `tiles-maps.etzhayyim.com` | 公開ホスト（wrangler の route） | **NXDOMAIN** |
+| `t1l3srv0.etzhayyim.com` | 同（nanoid 側） | **NXDOMAIN** |
+| `mcp.etzhayyim.com` | `/xrpc/:nsid` の中継先 | **NXDOMAIN** |
 
-## R2 layout
+deploy 先も中継先も、いま存在しない。`/xrpc/` は到達できなければ **502 を返し、
+試した URL を本文に書く** —— 成功と同じ形で隠さない。自分で引くこと
+（コマンドは `../../docs/operator-quickstart.md` §7）。
 
-```
-etzhayyim-maps-tiles/
-  v1/
-    manifest.json              # { version, pmtilesKey, builtAt, bytes, ... }
-    planet-{VERSION}.pmtiles   # tilemaker output
-```
+## 中継の header — 移行で直していない欠陥
 
-Built by `50-infra/k8s/maps-tilemaker-build`. Rollback = re-upload an older
-`manifest.json`.
+`/xrpc/:nsid` は client の header を（`host` を落として）そのまま上流へ渡す。
+`authorization` も `cookie` も渡る。**移行前の `+server.ts` がそうしていた**ので
+そのまま移した。中継先の header 方針は移行とは別の決定である。変えたのは
+`x-etzhayyim-bff` の値だけ（`sveltekit-edge-bff` → `cljs-edge-bff`。SvelteKit で
+ないものが SvelteKit を名乗るのは、直せる嘘だから）。
 
-## PMTiles v3 reader
+## 検査とビルド
 
-`src/pmtiles.ts` — ~430 LoC, zero npm deps. Implements:
-
-- 127-byte header parsing
-- Hilbert-curve `(z,x,y) → tile_id` mapping
-- Directory varint decoder (5 streams: tile_id delta, run_length, length, offset)
-- Root → leaf directory descent (one hop max)
-- Gzip decompression via `DecompressionStream` (WHATWG, CF Worker native)
-- Per-isolate cache for header + root dir (immutable for a given `pmtilesKey`)
-
-Cold tile fetch = 3–4 R2 ranged GETs (header, root, leaf?, tile).
-Warm (cached header + root) = 1–2 R2 ranged GETs. OpenMapTiles z14 tiles are
-typically 50–200 KiB — comfortably below the Worker 25 MiB response cap.
-
-**Unsupported**: brotli/zstd-compressed internal dirs or tiles (CF Workers
-only expose gzip + deflate via `DecompressionStream`). tilemaker defaults to
-gzip, so this is normally a non-issue.
-
-## Deploy
+`../../docs/operator-quickstart.md` の §3〜§7。要点だけ:
 
 ```bash
-cd 60-apps/etzhayyim-project-maps/appview/maps-tile-server-t1l3srv0
-
-# one-time: create KV namespace and paste the id into wrangler.jsonc
-wrangler kv:namespace create TILE_MANIFEST
-
-# one-time: create R2 bucket
-wrangler r2 bucket create etzhayyim-maps-tiles
-
-# deploy
-etzhayyim deploy
+cd ../..                                          # repo root
+npx nbb docs/verify-docs-claims.cljs              # 文書の数値が実測と一致するか
+npx nbb docs/verify-custody.cljs                  # 申告なしに upstream から動いていないか
+node ~/github/com-junkawasaki/scripts/resource-guard.mjs run build -- npx shadow-cljs release worker
+npx nbb scripts/smoke-worker.cljs dist/worker.js  # ビルドした bundle を実際に叩く
 ```
-
-## Post-deploy smoke test
-
-```bash
-curl -sS https://tiles.maps.etzhayyim.com/health
-curl -sS https://tiles.maps.etzhayyim.com/v1/manifest.json | jq .
-curl -sS -o /tmp/t.pbf -w '%{http_code} %{size_download} %{content_type}\n' \
-  https://tiles.maps.etzhayyim.com/v1/0/0/0.pbf
-```
-
-## Version bump procedure
-
-1. Kick `maps-tilemaker-build` K8s Job (see `50-infra/k8s/maps-tilemaker-build/README.md`).
-2. Job writes `v1/planet-{VERSION}.pmtiles` then `v1/manifest.json`.
-3. Purge KV cache: `wrangler kv:key delete --binding=TILE_MANIFEST "manifest:v1"`
-   (or wait ≤ 60 s for natural TTL).
-4. Smoke test (above). Per-isolate `pmtilesCache` keyed on `pmtilesKey`
-   self-invalidates when the key rotates.
-
-## Auth
-
-- **Current**: public, no auth (z 0–14). Intended for browser clients.
-- **TODO**: z ≥ 15 gated by AT session JWT + CF WAF rate-limit rule
-  (document in the next iteration — not in scope here).
-- **Rate limiting**: rely on CF WAF / Bot Fight for now; configure per-zone
-  rules on `tiles.maps.etzhayyim.com`.
-
-## R2 cost model
-
-- Each tile fetch on a warm isolate ≈ 1 Class B op (GET with Range) against R2.
-- Cold isolate adds header (1 op) + root dir (1 op) + optional leaf dir (1 op)
-  — so at most 4 ops per first tile after isolate spawn.
-- Egress from R2 → Worker is inside Cloudflare. Client egress is cached
-  heavily at edge (`s-maxage=604800`).
-- Worst-case budget: 10 M tile requests/day × 1.2 avg ops = 12 M Class B ops/day
-  ≈ $0.36/day for Class B at published rates (rates change — verify).
-
-## Integration
-
-- Frontend switch: point `cfg.mapTileUrl` in `maps-ui-uqpel6i6/svelte` at
-  `https://tiles.maps.etzhayyim.com/v1/{z}/{x}/{y}.pbf` and call
-  `applyOpenMapTilesStyle(map, tileUrl)` from
-  `./src/lib/kami-openmaptiles-style.ts`.
-- Parent agent is handling the runtime config swap — do not change
-  `App.svelte` in this deliverable.

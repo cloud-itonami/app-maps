@@ -58,12 +58,16 @@
                              :withheld route/withheld
                              :vars [:APP_NANOID :TILE_ATTRIBUTION]
                              :mcp-url "https://mcp.example/x"})]
+      ;; **path そのものを探すだけでは落ちない。** 実測 2026-08-18: route 表を
+      ;; 空に置き換えても `/health` と `/` は緑のままだった —— どちらも
+      ;; withheld の理由文（「/health に一本化した」）や別の文言に部分文字列と
+      ;; して現れるからである。表の中のセルを名指しで探す。
       (doseq [r route/routes]
-        (is (str/includes? html (:route/path r))
-            (str (:route/path r) " がページに出ていない")))
+        (is (str/includes? html (str "<span class=\"tile-mono\">" (:route/path r) "</span>"))
+            (str (:route/path r) " が route 表のセルとして出ていない")))
       (doseq [w route/withheld]
-        (is (str/includes? html (:route/path w))
-            (str (:route/path w) " が『移していない面』に出ていない")))
+        (is (str/includes? html (str "<span class=\"tile-mono\">" (:route/path w) "</span>"))
+            (str (:route/path w) " が『移していない面』のセルとして出ていない")))
       (is (str/includes? html "APP_NANOID"))
       (is (str/includes? html "https://mcp.example/x"))
       (testing "移行前のページの文言が残っていない"

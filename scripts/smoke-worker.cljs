@@ -75,12 +75,19 @@
                 (check! "GET / status" 200 (:status page))
                 (check! "GET / is html" true (str/includes? (or (:ct page) "") "text/html"))
 
-                ;; ページは route 表から描かれる。表にある path が全部出ていること。
-                (doseq [p ["/health" "/xrpc/:nsid" "/xrpc/*"]]
-                  (check! (str "page advertises " p) true (str/includes? (:body page) p)))
+                ;; ページは route 表から描かれる。表にある path が全部
+                ;; **表のセルとして** 出ていること。
+                ;; 素の部分文字列で探す形は落ちない検査だった —— 実測
+                ;; 2026-08-18、route 表を空にしても `/health` と `/` は緑の
+                ;; ままだった（withheld の理由文などに部分文字列として現れる）。
+                (doseq [p ["/" "/health" "/xrpc/:nsid" "/xrpc/*"]]
+                  (check! (str "page advertises " p) true
+                          (str/includes? (:body page)
+                                         (str "<span class=\"tile-mono\">" p "</span>"))))
                 ;; 移していない面も、理由と一緒に出ていること（黙って消していない）
                 (check! "page names a withheld route" true
-                        (str/includes? (:body page) "/v1/{z}/{x}/{y}.pbf"))
+                        (str/includes? (:body page)
+                                       "<span class=\"tile-mono\">/v1/{z}/{x}/{y}.pbf</span>"))
 
                 ;; env のキーは出す、値は出さない。**2 つの独立した印で見る** ——
                 ;; 片方だけだと「全部隠す」実装も「全部出す」実装も通ってしまう。

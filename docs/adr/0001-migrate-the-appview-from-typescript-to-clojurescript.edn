@@ -1,0 +1,60 @@
+[{:db/id -1
+  :adr/id "app-maps-0001"
+  :adr/title "maps-tile-server appview を TypeScript/Svelte から ClojureScript へ移す（maps-ui は移さない）"
+  :adr/status "accepted"
+  :adr/date "2026-08-19"
+  :adr/repo "cloud-itonami/app-maps"
+  :adr/doc_type "adr"
+  :adr/source-format "edn"
+  :adr/note "この repo の既存 ADR は日付ベースの id を使う（ADR-2608180800）。この 1 件だけ移行 brief の指定する連番の名前で置いている。どちらも docs/adr/ に共存する。"
+  :adr/context
+  "この repo には appview が **2 つ** ある。移行の brief は 1 つを前提にしていたので、まず測った（2026-08-18〜19、実測）。
+
+appview/maps-tile-server-t1l3srv0 — wrangler.jsonc の main が svelte/.svelte-kit/cloudflare/_worker.js を指す。その dir は tree に無い（.gitignore が .svelte-kit/ を無視している）。読み手が開く src/app.ts（284 行）と src/pmtiles.ts（402 行）は **どの bundle にも入っていない**。さらに、そのコードが要求する binding —— R2 TILES と KV TILE_MANIFEST —— は wrangler.jsonc に **1 つも宣言されていない**（r2_buckets も kv_namespaces も無い）。deploy されていたのは SvelteKit のビルド出力、すなわち svelte/src/routes/+page.svelte のランディングページと svelte/src/routes/xrpc/[...path]/+server.ts の MCP 中継だけである。そのページは routeCount: 0 / routes: [] / vars: [] を literal で持っており、隣の wrangler.jsonc が route 2 パターン・var 11 を宣言していることに気づけなかった。
+
+appview/maps-ui-uqpel6i6 — こちらは形が違う。wrangler.jsonc の main は **src/app.ts そのもの**（7,895 行）を指し、binding は R2 2・Hyperdrive 1・service 4・secrets_store 21 と**宣言済み**である。ただし build できない: wrangler.jsonc の alias が 8 つの module specifier を /Users/junkawasaki/github/etzhayyim-apps-etzhayyimcojp/ 配下の絶対パスへ書き換えており、**8 つとも今日このマシンに存在しない**（親ディレクトリ自体が無い）。assets の指す svelte/build も tree に無く、その SvelteKit half は workspace:* のため install もできない。これは 2026-08-18 の README.md が既に測って記録している。
+
+そして決定的なのは surface が **読めない** ことである。maps-ui の HTTP 応答はすべて @etzhayyim/kotodama-host-sdk の createWorkerExport が組み立てる（export default は _innerExport.fetch を包んだだけ）。この package は npm にも west の 4,212 project にも無い（nbb scripts/repo-search.cljs kotodama-host-sdk で 0 件）。65 の agent tool が SDK 経由で登録されるが、**どの path が何を返すかはこの repo からは決められない**。"
+  :adr/decision
+  "1. maps-tile-server appview を ClojureScript へ移す。
+
+    src/maps/tile/route.cljc    判断（どの handler が答えるか）
+    src/maps/tile/view.cljc     ページ（jp-go-dds の hiccup）
+    src/maps/tile/worker.cljs   Request/Response に触る唯一の層
+            ↓ shadow-cljs :target :esm
+    dist/worker.js              wrangler.jsonc の main が指すもの
+
+先例は同じ org の cloud-itonami/app-ongakuka と cloud-itonami-marketplace-listing。入口を .kotoba ではなく cljs に置くのは ADR-2606290000 の判断で、kotoba の ingress capability が :native-aot / :wasm-aot とも pending だからである。判断を .cljc に切り出してあるのは、ブラウザもビルドも無しにテストするためであり、ingress が qualify した時に最初に .kotoba へ移る部分だからでもある。
+
+2. maps-ui appview は移さない。**移せないからである。** その HTTP 面は存在しない package が定義しており、移植すれば behaviour を新規に発明して『移行した』と呼ぶことになる —— この移行が消そうとしている嘘そのものである。同時に **消しもしない**: 73 ファイルは custody 上 upstream と一致しており、宣言された binding の記録でもある。README.md に測定と一緒に名指しで残し、docs/verify-docs-claims.cljs がそのファイル数を pin するので黙って増えない。移すには @etzhayyim/kotodama-host-sdk の cljs face が要る。それは別の決定である。
+
+3. deploy されていなかった tile 配信面（/v1/{z}/{x}/{y}.pbf・/v1/manifest.json・/v1/style.json・/_worker/health・/_app/meta）は移さない。binding が無いので deploy しても動かない。**黙って消してもいない** —— route.cljc の `withheld` に理由付きのデータとして残り、ページにも表として出て、テストが『routes と withheld が重ならないこと』と『どの withheld にも理由があること』を検査する。
+
+3b. 決定のあとで見つかった 3 つ目の測定も同じ向きを指した: **その面の唯一の repo 内 consumer が、それを拒否している。** maps-ui の svelte/src/App.svelte:697 は vector tile URL から tiles-maps.etzhayyim.com を除外し、コメントに『Known-broken host (TLS handshake fails) … explicitly rejected so stale server config or registered VectorSource rows can't resurrect the black-tile path』と書いてある。deploy されたことが無く、binding も無く、**そのうえ唯一の client が blocklist している**。
+
+4. /health を **足した**。移行前の SvelteKit には無い（src/app.ts は宣言していたが deploy されていない）。移してきたものではないので、route 表が :route/origin :added を持ち、ページの『出自』列にそう出る。足したものを移したものと読ませない。
+
+5. 多段の /xrpc/a/b は移行前と同じく**そのまま中継する**。SvelteKit の rest parameter [...path] がそうしていた。空文字だけが 400。1 セグメントに絞るのは移行ではなく方針変更である。
+
+6. 中継 header の欠陥は **持ち越す**。client の header を（host を落として）そのまま上流へ渡す形は移行前からで、authorization も cookie も渡る。中継先の header 方針は移行とは別の決定なので、移行の commit に紛れ込ませない。変えたのは x-etzhayyim-bff の値だけ（sveltekit-edge-bff → cljs-edge-bff）。
+
+7. custody の申告に 2 種類を足した。migration.edn は :canonical-files（足した）しか持っておらず、docs/verify-custody.cljs は upstream に在って手元に無いファイルを無条件に FAIL にしていた。移行は 11 ファイルを撤去し 3 ファイルを意図して変えるので、:removed-by-migration と :modified-by-migration を足し、verify-custody.cljs をそれに合わせた。**申告自体も検査する**: 撤去したと言いながら在る / 変えたと言いながら 1 バイトも違わない / 足したと言いながら upstream にも在る、はいずれも FAIL。さもないと『申告を書き足せば何でも通る』検査になり、落ちようがなくなる。"
+  :adr/consequences
+  "移行前の 3 つの欠陥のうち 2 つは構造的に消えた。main が指す bundle は src/ からコンパイルされる（『開くファイル』と『動くファイル』が同じ）。ページは route 表を引数で受けて描く（表示と実際に答えるものが同じ 1 つの値から出る）。
+
+TypeScript は maps-tile-server appview から 0 本になった。撤去した 11 ファイルの内訳は .ts 4（app.ts / pmtiles.ts / svelte の +server.ts / vite.config.ts）・.svelte 1（+page.svelte）・app.html 1・svelte.config.js 1・package.json 2・tsconfig.json 2 である。repo 全体では .ts（.d.ts 除く）が 94 → 90 本で、残りは **kotoba/ に 49 本・maps-ui に 41 本**。どちらも移行対象ではない。**『TypeScript を全部消した』とは言えないし、言わない。**
+
+検査は 4 本あり、**4 本とも赤くしてから緑を受け取った**（2026-08-18〜19 実測）:
+
+- nbb テスト 6 tests / 42 assertions。/xrpc/a/b を 1 セグメントに絞る変異で赤。
+- design-quality 100.00 / 100（gate 95、10 軸。--extra-axes でも 100.00）。scored artifact から viewport meta を剥ぐ変異で 88.76 → FAIL。**同じページをデザインシステムの CSS ゼロで描くと 96.63 で PASS する** —— このスコアは『デザインシステムが入っている』を意味しない。
+- shadow-cljs release、:compiler-options に :warnings-as-errors true。route/dispatch を存在しない名前に改名すると exit 1、**dist/worker.js の sha256 は 1 バイトも動かない**（落ちたビルドは出荷しない）。このキーを :build-options に置くと黙って無視される。
+- scripts/smoke-worker.cljs —— ビルドした bundle を import して叩く唯一の検査。bundle が無ければ exit 2（0 とも 1 とも別）。
+
+smoke で落ちない検査を 2 つ見つけて直した。(a) デザインシステムの検査を 2 本に割った: `class=\"dads-table\"` は view がライブラリを呼んだこと、`--color-primitive-blue` は stylesheet が実際に bundle に入ったこと。実測、このページで dads-table は CSS 込み 79 / CSS 無し **11**（0 にならない）、--color-primitive-blue は 45 / **0**。(b) route 表の検査を『path が本文に現れる』から『表のセル `<span class=\"tile-mono\">path</span>` として現れる』に変えた —— 前者は route 表を空にしても /health と / が緑のままだった（withheld の理由文に部分文字列として現れるため）。直した後は 4 本とも赤くなる。
+
+env の値の露出は **2 つの独立した印**で見る: 出てはいけない値（sentinel）と、出ていなければならない値（中継先 URL、.invalid の TLD で実 DNS に依存しない）。片方だけだと『全部隠す』実装も『全部出す』実装も通る。
+
+compatibility_flags（nodejs_compat / nodejs_als）は SvelteKit の adapter-cloudflare 由来なので撤去した。**憶測ではなく `wrangler dev --local`（実 workerd）で全 route を叩いて確かめた** —— GET / 200 text/html、GET /health 200 JSON、POST /xrpc/ 400、OPTIONS /xrpc/x 204、POST /xrpc/a/b 502、GET /v1/0/0/0.pbf 404、POST /health 405。
+
+直っていないもの: 6 ホストとも NXDOMAIN（deploy 先も中継先も存在しない）。kotoba/ の 9 ファイルが構文エラー（ADR-2608180800 決定 2）。公開された Mapillary token（同 決定 1）。maps-ui は build も deploy もできないまま。deploy は**していない**（wrangler dev --local までで、wrangler deploy は実行していない）。"}]

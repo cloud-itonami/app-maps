@@ -1,16 +1,32 @@
+// maps-tile-server appview の Worker 設定。
+//
+// 2026-08-18 の移行（../../docs/adr/0001）で 4 点だけ変えた:
+//   1. main    svelte/.svelte-kit/cloudflare/_worker.js → ../../dist/worker.js
+//              前者は tree に存在しない SvelteKit のビルド出力だった。後者は
+//              ../../src/maps/tile/worker.cljs をコンパイルしたものである。
+//   2. assets  ブロックを撤去。./svelte/.svelte-kit/cloudflare/client を指して
+//              いたが、その dir も tree に無い。
+//   3. compatibility_flags  nodejs_compat / nodejs_als を撤去。どちらも
+//              SvelteKit の adapter-cloudflare 由来で、この bundle は使わない。
+//              憶測ではなく `wrangler dev --local` で全 route を叩いて確かめた
+//              （../../docs/operator-quickstart.md §5.6）。
+//   4. APP_FRAMEWORK   sveltekit-edge-bff → cljs-esm-worker
+//      APP_DESCRIPTION "Edge-only SvelteKit BFF …" → "… ClojureScript BFF …"
+//      どちらも SvelteKit を名指ししており、移行後は嘘になる。
+//
+// vars はそれ以外 1 つも触っていない。TILE_* の 3 つは移していない tile 配信
+// 面（../../src/maps/tile/route.cljc の `withheld`）が読むはずだった値で、
+// 今日は誰も読まない —— 移行前も読んでいなかった（src/app.ts は deploy されて
+// いない）。消すのは移行とは別の決定なので、残して記録する。
 {
   "name": "kotodama-t1l3srv0",
-  "main": "svelte/.svelte-kit/cloudflare/_worker.js",
+  "main": "../../dist/worker.js",
   "compatibility_date": "2025-03-17",
-  "compatibility_flags": [
-    "nodejs_compat",
-    "nodejs_als"
-  ],
   "vars": {
     "APP_CAPABILITIES": "[\"mvt-tile-serving\",\"pmtiles\",\"openmaptiles\"]",
-    "APP_DESCRIPTION": "Edge-only SvelteKit BFF for map tile requests. Tile storage and generation run behind the agentgateway MCP router.",
+    "APP_DESCRIPTION": "Edge-only ClojureScript BFF for map tile requests. Tile storage and generation run behind the agentgateway MCP router.",
     "APP_DISPLAY_NAME": "Maps Tile Server",
-    "APP_FRAMEWORK": "sveltekit-edge-bff",
+    "APP_FRAMEWORK": "cljs-esm-worker",
     "APP_NANOID": "t1l3srv0",
     "APP_PERFORMER_TYPE": "service",
     "APP_UI_TYPE": "none",
@@ -28,11 +44,5 @@
       "pattern": "t1l3srv0.etzhayyim.com/*",
       "zone_name": "etzhayyim.com"
     }
-  ],
-  "assets": {
-    "directory": "./svelte/.svelte-kit/cloudflare/client",
-    "binding": "ASSETS",
-    "html_handling": "auto-trailing-slash",
-    "not_found_handling": "none"
-  }
+  ]
 }

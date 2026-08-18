@@ -1,0 +1,28 @@
+;; maps-tile-server appview の Worker。:esm。先例は同じ org の
+;; cloud-itonami-marketplace-listing と cloud-itonami/app-ongakuka。
+;;
+;; appview/maps-tile-server-t1l3srv0/wrangler.jsonc の main は
+;; ../../dist/worker.js を指し、それは THIS bundle —— src/ のソースを
+;; コンパイルしたもの —— である。移行前は main が SvelteKit のビルド出力
+;; (svelte/.svelte-kit/cloudflare/_worker.js、tree に存在しない) を指しており、
+;; 読み手が開く TypeScript はどの bundle にも入っていなかった（docs/adr/0001）。
+;;
+;; :warnings-as-errors は飾りではない。shadow は未宣言 var や改名された var を
+;; WARNING として扱うので、`shadow-cljs release worker` が exit 0 のまま、
+;; 最初のリクエストで壊れる bundle を書き出す。「ビルドが通った」はそれ自体
+;; 検査ではない —— 落ちようが無いからである。この repo でも landing 前に
+;; 実際に落として確かめた（docs/operator-quickstart.md §5）。
+{:deps {:aliases [:cljs]}
+ :builds
+ {:worker
+  {:target :esm
+   :output-dir "dist"
+   :modules {:worker {:exports {default maps.tile.worker/handler}}}
+   ;; NOTE このキーは :compiler-options に置く。:build-options ではない ——
+   ;; shadow が読むのは [:compiler-options :warnings-as-errors]
+   ;; (shadow/build/compiler.clj `should-warning-throw?`)。置き場所を間違えると
+   ;; **黙って無視され**、この option が防ぐはずの失敗（落ちようの無い検査）
+   ;; そのものになる。
+   :compiler-options {:output-feature-set :es2020
+                      :infer-externs :auto
+                      :warnings-as-errors true}}}}

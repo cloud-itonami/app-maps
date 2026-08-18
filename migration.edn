@@ -1,1 +1,44 @@
-{:schema "etzhayyim.migration/repository-v1" :source-revision "45b590633285a1988b399c0ab49a7ac56614015f" :source-path "60-apps/etzhayyim-project-maps" :canonical-files ["README.edn" "migration.edn" ".gitignore" "README.md" "docs/operator-quickstart.md" "docs/verify-custody.cljs" "docs/verify-docs-claims.cljs" "docs/adr/2608180800-app-maps-inherited-defects.edn"]}
+{:schema "etzhayyim.migration/repository-v1"
+ :source-revision "45b590633285a1988b399c0ab49a7ac56614015f"
+ :source-path "60-apps/etzhayyim-project-maps"
+
+ ;; この repo が **足した** ファイル。upstream に無くてよい。
+ :canonical-files
+ ["README.edn"
+  "migration.edn"
+  ".gitignore"
+  "README.md"
+  "docs/operator-quickstart.md"
+  "docs/verify-custody.cljs"
+  "docs/verify-docs-claims.cljs"
+  "docs/adr/2608180800-app-maps-inherited-defects.edn"
+  "docs/adr/0001-migrate-the-appview-from-typescript-to-clojurescript.edn"
+  "deps.edn"
+  "shadow-cljs.edn"
+  "src/maps/tile/route.cljc"
+  "src/maps/tile/view.cljc"
+  "src/maps/tile/worker.cljs"
+  "test/maps/tile/route_test.cljc"
+  "scripts/smoke-worker.cljs"]
+
+ ;; 継承したが **意図して変えた** ファイル。upstream と内容が違ってよい。
+ ;; docs/adr/0001（appview の cljs 移行）の結果。
+ :modified-by-migration
+ ["appview/maps-tile-server-t1l3srv0/wrangler.jsonc"
+  "appview/maps-tile-server-t1l3srv0/kotodama.jsonld"
+  "appview/maps-tile-server-t1l3srv0/README.md"]
+
+ ;; 継承したが **意図して撤去した** ファイル。upstream に在って手元に無くてよい。
+ ;; maps-tile-server appview の TypeScript と Svelte。docs/adr/0001。
+ :removed-by-migration
+ ["appview/maps-tile-server-t1l3srv0/package.json"
+  "appview/maps-tile-server-t1l3srv0/src/app.ts"
+  "appview/maps-tile-server-t1l3srv0/src/pmtiles.ts"
+  "appview/maps-tile-server-t1l3srv0/tsconfig.json"
+  "appview/maps-tile-server-t1l3srv0/svelte/package.json"
+  "appview/maps-tile-server-t1l3srv0/svelte/src/app.html"
+  "appview/maps-tile-server-t1l3srv0/svelte/src/routes/+page.svelte"
+  "appview/maps-tile-server-t1l3srv0/svelte/src/routes/xrpc/[...path]/+server.ts"
+  "appview/maps-tile-server-t1l3srv0/svelte/svelte.config.js"
+  "appview/maps-tile-server-t1l3srv0/svelte/tsconfig.json"
+  "appview/maps-tile-server-t1l3srv0/svelte/vite.config.ts"]}

@@ -34,7 +34,7 @@
 
 (require '["node:child_process" :as cp]
          '["node:fs" :as fs]
-         '[clojure.string :as str]
+         '[kotoba.lang.text :as str]
          '[clojure.edn :as edn])
 
 (defn- die! [code & msg]

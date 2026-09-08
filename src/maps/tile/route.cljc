@@ -9,7 +9,7 @@
   ingress capability が qualify したら（`:native-aot`/`:wasm-aot` は今日
   pending —— ADR-2606290000）最初に `.kotoba` へ移るのもここである。route 表は
   スカラと文字列に対する決定で、その移行を生き延びる形をしている。"
-  (:require [clojure.string :as str]))
+  (:require [kotoba.lang.text :as str]))
 
 (def routes
   "この Worker が実際に答える公開面を、データとして持つ。ランディングページは
@@ -68,7 +68,7 @@
   `:page` / `:health` / `:xrpc` / `:cors-preflight` / `:not-found` /
   `:method-not-allowed` / `:bad-request` のいずれか。"
   [method path]
-  (let [m (keyword (str/lower-case (or method "get")))
+  (let [m (keyword (str/lower (or method "get")))
         p (or path "")]
     (cond
       (and (= m :options) (str/starts-with? p "/xrpc/"))

@@ -22,7 +22,7 @@
   HTTP boundary is injectable (the swap seam, per the actor-tree idiom): pass
   `:post-fn` in opts to provide the purpose-specific request capability. The
   portable default is network-incapable; deployment config is supplied as data."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [cheshire.core :as json]
             [maps.bulk-ingest.kotoba-feature :as kf]))
 
@@ -132,7 +132,7 @@
   (upsert-vertex-spatial [_ rows]
     (reduce
      (fn [n row]
-       (let [label (-> (or (get row "label") "") str str/lower-case str/trim)]
+       (let [label (-> (or (get row "label") "") str str/lower str/trim)]
          (if (str/blank? label)
            n
            (do
@@ -175,7 +175,7 @@
   transitional rw fallback."
   ([] (open-substrate-writer {}))
   ([{:keys [mode] :as opts}]
-   (let [mode (or (some-> mode str/lower-case) "rw")]
+   (let [mode (or (some-> mode str/lower) "rw")]
      (case mode
        "kotoba" (make-kotoba-writer opts)
        "mst" (make-mst-writer opts)

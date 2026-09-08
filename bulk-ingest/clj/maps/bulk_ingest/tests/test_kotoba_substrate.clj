@@ -10,7 +10,7 @@
   orgs/etzhayyim/com-etzhayyim-maps python (_LABEL_MAP / name_tokens) are out of scope for the bb
   port and remain asserted by the python suite."
   (:require [clojure.test :refer [deftest is]]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [cheshire.core :as json]
             [maps.bulk-ingest.kotoba-feature :as kf]
             [maps.bulk-ingest.substrate :as sub]))
@@ -82,7 +82,7 @@
 (deftest all-keywords-are-kebab
   (doseq [kw (vals kf/label-map)]
     (is (str/starts-with? kw ":") kw)
-    (is (= kw (str/lower-case kw)) kw)
+    (is (= kw (str/lower kw)) kw)
     (is (not (str/includes? kw "_")) kw)))
 
 ;; ── TestGate ──
@@ -99,7 +99,7 @@
                 nil
                 (catch clojure.lang.ExceptionInfo e e))]
     (is (some? ex))
-    (is (str/includes? (str/lower-case (ex-message ex)) "no-server-key"))))
+    (is (str/includes? (str/lower (ex-message ex)) "no-server-key"))))
 
 (deftest rw-mode-forbidden
   ;; substrate boundary: rw is refused in clj (python keeps the fallback)

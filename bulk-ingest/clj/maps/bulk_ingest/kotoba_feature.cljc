@@ -13,7 +13,7 @@
   live PDS. The H3 spatial index (`feature.cell/rN`) is a hard dep on an h3
   library (not available under bb); like the python fallback (`h3` absent ->
   `{}`), `stamp-cells` degrades to `{}` here. See run notes / PORT-NOTES.md."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [cheshire.core :as json]))
 
 ;; H3 resolutions the maps client queries (the zoom->LOD ladder; ontology §2).
@@ -38,7 +38,7 @@
       (cond
         (str/starts-with? s ":") s
         :else (get label-map s
-                    (str ":" (-> s str/trim str/lower-case (str/replace " " "-"))))))))
+                    (str ":" (-> s str/trim str/lower (str/replace " " "-"))))))))
 
 (defn- numeric? [x] (and (some? x) (number? x)))
 
@@ -74,7 +74,7 @@
   "Partition a (lowercased) name into [(kind run-text) ...] where kind is
   :cjk | :ascii. Mirrors python `_name_runs`."
   [name]
-  (let [s (str/lower-case (or name ""))]
+  (let [s (str/lower (or name ""))]
     (loop [chars (seq s), out [], buf [], kind nil]
       (if (empty? chars)
         (if (and (seq buf) (some? kind))

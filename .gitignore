@@ -20,3 +20,6 @@ dist/
 .shadow-cljs/
 .cpcache/
 .wrangler/
+
+# nbb dependency cache -- a build artifact, not source
+.nbb/

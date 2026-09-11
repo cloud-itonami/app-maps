@@ -18,15 +18,15 @@ appview/maps-ui-uqpel6i6 — こちらは形が違う。wrangler.jsonc の main 
   :adr/decision
   "1. maps-tile-server appview を ClojureScript へ移す。
 
-    src/maps/tile/route.cljc    判断（どの handler が答えるか）
-    src/maps/tile/view.cljc     ページ（jp-go-dds の hiccup）
-    src/maps/tile/worker.cljs   Request/Response に触る唯一の層
+    src/maps/tile/route.cljk    判断（どの handler が答えるか）
+    src/maps/tile/view.cljk     ページ（jp-go-dds の hiccup）
+    src/maps/tile/worker.cljk   Request/Response に触る唯一の層
             ↓ shadow-cljs :target :esm
     dist/worker.js              wrangler.jsonc の main が指すもの
 
 先例は同じ org の cloud-itonami/app-ongakuka と cloud-itonami-marketplace-listing。入口を .kotoba ではなく cljs に置くのは ADR-2606290000 の判断で、kotoba の ingress capability が :native-aot / :wasm-aot とも pending だからである。判断を .cljc に切り出してあるのは、ブラウザもビルドも無しにテストするためであり、ingress が qualify した時に最初に .kotoba へ移る部分だからでもある。
 
-2. maps-ui appview は移さない。**移せないからである。** その HTTP 面は存在しない package が定義しており、移植すれば behaviour を新規に発明して『移行した』と呼ぶことになる —— この移行が消そうとしている嘘そのものである。同時に **消しもしない**: 73 ファイルは custody 上 upstream と一致しており、宣言された binding の記録でもある。README.md に測定と一緒に名指しで残し、docs/verify-docs-claims.cljs がそのファイル数を pin するので黙って増えない。移すには @etzhayyim/kotodama-host-sdk の cljs face が要る。それは別の決定である。
+2. maps-ui appview は移さない。**移せないからである。** その HTTP 面は存在しない package が定義しており、移植すれば behaviour を新規に発明して『移行した』と呼ぶことになる —— この移行が消そうとしている嘘そのものである。同時に **消しもしない**: 73 ファイルは custody 上 upstream と一致しており、宣言された binding の記録でもある。README.md に測定と一緒に名指しで残し、docs/verify-docs-claims.cljk がそのファイル数を pin するので黙って増えない。移すには @etzhayyim/kotodama-host-sdk の cljs face が要る。それは別の決定である。
 
 3. deploy されていなかった tile 配信面（/v1/{z}/{x}/{y}.pbf・/v1/manifest.json・/v1/style.json・/_worker/health・/_app/meta）は移さない。binding が無いので deploy しても動かない。**黙って消してもいない** —— route.cljc の `withheld` に理由付きのデータとして残り、ページにも表として出て、テストが『routes と withheld が重ならないこと』と『どの withheld にも理由があること』を検査する。
 
@@ -38,7 +38,7 @@ appview/maps-ui-uqpel6i6 — こちらは形が違う。wrangler.jsonc の main 
 
 6. 中継 header の欠陥は **持ち越す**。client の header を（host を落として）そのまま上流へ渡す形は移行前からで、authorization も cookie も渡る。中継先の header 方針は移行とは別の決定なので、移行の commit に紛れ込ませない。変えたのは x-etzhayyim-bff の値だけ（sveltekit-edge-bff → cljs-edge-bff）。
 
-7. custody の申告に 2 種類を足した。migration.edn は :canonical-files（足した）しか持っておらず、docs/verify-custody.cljs は upstream に在って手元に無いファイルを無条件に FAIL にしていた。移行は 11 ファイルを撤去し 3 ファイルを意図して変えるので、:removed-by-migration と :modified-by-migration を足し、verify-custody.cljs をそれに合わせた。**申告自体も検査する**: 撤去したと言いながら在る / 変えたと言いながら 1 バイトも違わない / 足したと言いながら upstream にも在る、はいずれも FAIL。さもないと『申告を書き足せば何でも通る』検査になり、落ちようがなくなる。"
+7. custody の申告に 2 種類を足した。migration.edn は :canonical-files（足した）しか持っておらず、docs/verify-custody.cljk は upstream に在って手元に無いファイルを無条件に FAIL にしていた。移行は 11 ファイルを撤去し 3 ファイルを意図して変えるので、:removed-by-migration と :modified-by-migration を足し、verify-custody.cljs をそれに合わせた。**申告自体も検査する**: 撤去したと言いながら在る / 変えたと言いながら 1 バイトも違わない / 足したと言いながら upstream にも在る、はいずれも FAIL。さもないと『申告を書き足せば何でも通る』検査になり、落ちようがなくなる。"
   :adr/consequences
   "移行前の 3 つの欠陥のうち 2 つは構造的に消えた。main が指す bundle は src/ からコンパイルされる（『開くファイル』と『動くファイル』が同じ）。ページは route 表を引数で受けて描く（表示と実際に答えるものが同じ 1 つの値から出る）。
 
@@ -49,7 +49,7 @@ TypeScript は maps-tile-server appview から 0 本になった。撤去した 
 - nbb テスト 6 tests / 42 assertions。/xrpc/a/b を 1 セグメントに絞る変異で赤。
 - design-quality 100.00 / 100（gate 95、10 軸。--extra-axes でも 100.00）。scored artifact から viewport meta を剥ぐ変異で 88.76 → FAIL。**同じページをデザインシステムの CSS ゼロで描くと 96.63 で PASS する** —— このスコアは『デザインシステムが入っている』を意味しない。
 - shadow-cljs release、:compiler-options に :warnings-as-errors true。route/dispatch を存在しない名前に改名すると exit 1、**dist/worker.js の sha256 は 1 バイトも動かない**（落ちたビルドは出荷しない）。このキーを :build-options に置くと黙って無視される。
-- scripts/smoke-worker.cljs —— ビルドした bundle を import して叩く唯一の検査。bundle が無ければ exit 2（0 とも 1 とも別）。
+- scripts/smoke-worker.cljk —— ビルドした bundle を import して叩く唯一の検査。bundle が無ければ exit 2（0 とも 1 とも別）。
 
 smoke で落ちない検査を 2 つ見つけて直した。(a) デザインシステムの検査を 2 本に割った: `class=\"dads-table\"` は view がライブラリを呼んだこと、`--color-primitive-blue` は stylesheet が実際に bundle に入ったこと。実測、このページで dads-table は CSS 込み 79 / CSS 無し **11**（0 にならない）、--color-primitive-blue は 45 / **0**。(b) route 表の検査を『path が本文に現れる』から『表のセル `<span class=\"tile-mono\">path</span>` として現れる』に変えた —— 前者は route 表を空にしても /health と / が緑のままだった（withheld の理由文に部分文字列として現れるため）。直した後は 4 本とも赤くなる。
 

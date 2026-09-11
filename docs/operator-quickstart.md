@@ -11,7 +11,7 @@ has not run.
 re-walked**: its `npm install` / `vitest` / `tsc` figures are carried unchanged
 from the 2026-08-18 walk recorded in
 [`../docs/adr/2608180800-app-maps-inherited-defects.edn`](adr/2608180800-app-maps-inherited-defects.edn).
-The migration did not touch `kotoba/`, and `docs/verify-custody.cljs` shows its
+The migration did not touch `kotoba/`, and `docs/verify-custody.cljk` shows its
 59 files are byte-identical to upstream — but that is an argument that they
 *should* be unchanged, not a re-measurement, so they are labelled rather than
 claimed. §8 (Python) was re-run: 21 files, 0 failures, python 3.14.5.
@@ -25,8 +25,8 @@ else in the repository is blocked on causes outside it.
 ```bash
 git clone git@github.com:cloud-itonami/app-maps.git && cd app-maps
 git ls-files | wc -l               # 216
-npx nbb docs/verify-custody.cljs      # PASS — 200 blobs match etzhayyim/root@45b5906
-npx nbb docs/verify-docs-claims.cljs  # PASS — 39 checks
+npx nbb docs/verify-custody.cljk      # PASS — 200 blobs match etzhayyim/root@45b5906
+npx nbb docs/verify-docs-claims.cljk  # PASS — 39 checks
 ```
 
 `verify-custody.cljs` needs network (it asks GitHub for the upstream subtree)
@@ -195,7 +195,7 @@ Renaming `route/dispatch` to `route/dispatch-nonexistent` and rebuilding:
 
 ```
 ------ ERROR -------------------------------------------------------------------
- File: src/maps/tile/worker.cljs:124:44
+ File: src/maps/tile/worker.cljk:124:44
 ```
 
 | | exit | `dist/worker.js` sha256 | bytes |
@@ -218,14 +218,14 @@ sha256 26bbca65…471aa497   ← a DIFFERENT bundle was written and shipped
 
 and that bundle throws on import: `Cannot read properties of undefined
 (reading 'h')`. So the misplacement is not cosmetic — it restores exactly the
-failure the option exists to prevent. `docs/verify-docs-claims.cljs` asserts
+failure the option exists to prevent. `docs/verify-docs-claims.cljk` asserts
 the placement by **reading `shadow-cljs.edn` as EDN**, never by grepping: a
 grep would match the comment that explains this.
 
 ## 6. Exercise the bundle you built
 
 ```bash
-npx --yes nbb scripts/smoke-worker.cljs dist/worker.js
+npx --yes nbb scripts/smoke-worker.cljk dist/worker.js
 ```
 
 24 checks, actual output (abridged):
@@ -349,7 +349,7 @@ checkout behind `origin/main`.
 ## 10. Before you change anything
 
 `migration.edn` declares what this repository added to, changed in, and removed
-from what it was given; `docs/verify-custody.cljs` fails if any of those
+from what it was given; `docs/verify-custody.cljk` fails if any of those
 declarations stops being true — **including a declaration that is itself
 false**. If you add a file, add it to `:canonical-files` in the same commit;
 if you remove an inherited one, add it to `:removed-by-migration`. Otherwise

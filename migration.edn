@@ -9,17 +9,17 @@
   ".gitignore"
   "README.md"
   "docs/operator-quickstart.md"
-  "docs/verify-custody.cljs"
-  "docs/verify-docs-claims.cljs"
+  "docs/verify-custody.cljk"
+  "docs/verify-docs-claims.cljk"
   "docs/adr/2608180800-app-maps-inherited-defects.edn"
   "docs/adr/0001-migrate-the-appview-from-typescript-to-clojurescript.edn"
   "deps.edn"
   "shadow-cljs.edn"
-  "src/maps/tile/route.cljc"
-  "src/maps/tile/view.cljc"
-  "src/maps/tile/worker.cljs"
-  "test/maps/tile/route_test.cljc"
-  "scripts/smoke-worker.cljs"]
+  "src/maps/tile/route.cljk"
+  "src/maps/tile/view.cljk"
+  "src/maps/tile/worker.cljk"
+  "test/maps/tile/route_test.cljk"
+  "scripts/smoke-worker.cljk"]
 
  ;; 継承したが **意図して変えた** ファイル。upstream と内容が違ってよい。
  ;; docs/adr/0001（appview の cljs 移行）の結果。

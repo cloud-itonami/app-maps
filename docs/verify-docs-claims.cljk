@@ -2,7 +2,7 @@
 ;; verify-docs-claims.cljs — README.md と docs/operator-quickstart.md が
 ;; 「数えた」と言っている数を、実際に数えて突き合わせる。
 ;;
-;;   nbb docs/verify-docs-claims.cljs
+;;   nbb docs/verify-docs-claims.cljk
 ;;
 ;; exit 0 = PASS / 1 = FAIL / 3 = 判定できなかった（0 でも 1 でもない）
 ;;
@@ -190,8 +190,8 @@
                  (re-find #"\.(cljs|cljc|clj|kotoba)$" %))
            tracked))
 
-(def ^:private view-src   (slurp* "src/maps/tile/view.cljc"))
-(def ^:private worker-src (slurp* "src/maps/tile/worker.cljs"))
+(def ^:private view-src   (slurp* "src/maps/tile/view.cljk"))
+(def ^:private worker-src (slurp* "src/maps/tile/worker.cljk"))
 
 ;; ── 判定 ──────────────────────────────────────────────────────────────────
 

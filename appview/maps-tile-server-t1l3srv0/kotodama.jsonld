@@ -38,7 +38,7 @@
     "framework": "cljs-esm-worker",
     "businessLogicPlacement": "edge-infrastructure",
     "migrationDisposition": "migrated-to-clojurescript-2026-08-19",
-    "reason": "The Worker is ClojureScript compiled by shadow-cljs to dist/worker.js, which is what wrangler.jsonc main points at (docs/adr/0001). The PMTiles tile-serving surface this descriptor's routes and KPIs describe was never deployed and is not carried over: its R2 and KV bindings are declared nowhere in wrangler.jsonc. See src/maps/tile/route.cljc `withheld`."
+    "reason": "The Worker is ClojureScript compiled by shadow-cljs to dist/worker.js, which is what wrangler.jsonc main points at (docs/adr/0001). The PMTiles tile-serving surface this descriptor's routes and KPIs describe was never deployed and is not carried over: its R2 and KV bindings are declared nowhere in wrangler.jsonc. See src/maps/tile/route.cljk `withheld`."
   },
   "routes": [
     {

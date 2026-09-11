@@ -8,9 +8,9 @@
 ## deploy されるものは、いま読んでいるソースである
 
 ```
-../../src/maps/tile/route.cljc    判断（どの handler が答えるか） ← 純 .cljc、テスト対象
-../../src/maps/tile/view.cljc     ページ（jp-go-dds の hiccup）   ← 純 .cljc、テスト対象
-../../src/maps/tile/worker.cljs   Request/Response に触る唯一の層
+../../src/maps/tile/route.cljk    判断（どの handler が答えるか） ← 純 .cljc、テスト対象
+../../src/maps/tile/view.cljk     ページ（jp-go-dds の hiccup）   ← 純 .cljc、テスト対象
+../../src/maps/tile/worker.cljk   Request/Response に触る唯一の層
         ↓ shadow-cljs :target :esm
 ../../dist/worker.js              ← wrangler.jsonc の "main" が指すもの
 ```
@@ -28,7 +28,7 @@
 | OPTIONS | `/xrpc/*` | CORS preflight | 移行前から |
 | GET | `/health` | 生存確認 JSON | **移行で追加** |
 
-出所は `../../src/maps/tile/route.cljc` の `routes` で、**ページもそこから描く**。
+出所は `../../src/maps/tile/route.cljk` の `routes` で、**ページもそこから描く**。
 移行前のページは `routeCount: 0` / `routes: []` / `vars: []` を literal で持って
 おり、隣の `wrangler.jsonc` が route 2 パターン・var 11 を宣言していることに
 気づけなかった。
@@ -87,8 +87,8 @@ deploy 先も中継先も、いま存在しない。`/xrpc/` は到達できな�
 
 ```bash
 cd ../..                                          # repo root
-npx nbb docs/verify-docs-claims.cljs              # 文書の数値が実測と一致するか
-npx nbb docs/verify-custody.cljs                  # 申告なしに upstream から動いていないか
+npx nbb docs/verify-docs-claims.cljk              # 文書の数値が実測と一致するか
+npx nbb docs/verify-custody.cljk                  # 申告なしに upstream から動いていないか
 node ~/github/com-junkawasaki/scripts/resource-guard.mjs run build -- npx shadow-cljs release worker
-npx nbb scripts/smoke-worker.cljs dist/worker.js  # ビルドした bundle を実際に叩く
+npx nbb scripts/smoke-worker.cljk dist/worker.js  # ビルドした bundle を実際に叩く
 ```

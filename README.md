@@ -16,7 +16,7 @@ for gaussian-splat work; `tools/` holds one operator note.
 
 Start at [`docs/operator-quickstart.md`](docs/operator-quickstart.md). Every
 number on this page is re-measured by
-[`docs/verify-docs-claims.cljs`](docs/verify-docs-claims.cljs) (39 checks); run
+[`docs/verify-docs-claims.cljk`](docs/verify-docs-claims.cljk) (39 checks); run
 it before trusting any of them.
 
 ## The migration — one appview of two
@@ -27,9 +27,9 @@ The **`maps-ui`** appview did not. They are different shapes and the difference
 decided the outcome:
 
 ```
-src/maps/tile/route.cljc    判断（どの handler が答えるか）  ← 純 .cljc、テスト対象
-src/maps/tile/view.cljc     ページ（jp-go-dds の hiccup）    ← 純 .cljc、テスト対象
-src/maps/tile/worker.cljs   Request/Response に触る唯一の層
+src/maps/tile/route.cljk    判断（どの handler が答えるか）  ← 純 .cljc、テスト対象
+src/maps/tile/view.cljk     ページ（jp-go-dds の hiccup）    ← 純 .cljc、テスト対象
+src/maps/tile/worker.cljk   Request/Response に触る唯一の層
         ↓ shadow-cljs :target :esm
 dist/worker.js              ← appview/maps-tile-server-t1l3srv0/wrangler.jsonc の "main"
 ```
@@ -53,7 +53,7 @@ workspace (`nbb scripts/repo-search.cljs kotodama-host-sdk` → 0 hits). **Its
 route surface cannot be read here, so it cannot be ported here**; porting it
 would mean inventing behaviour and calling it a migration. It is also not
 deleted: its 73 files match upstream SHA-for-SHA and record the intended
-bindings. `docs/verify-docs-claims.cljs` pins that file count so the untouched
+bindings. `docs/verify-docs-claims.cljk` pins that file count so the untouched
 subsystem cannot grow silently.
 
 Migrating it needs a ClojureScript face for that SDK. That is a separate
@@ -64,7 +64,7 @@ decision.
 The tile-serving surface in `src/app.ts` — `/v1/{z}/{x}/{y}.pbf`,
 `/v1/manifest.json`, `/v1/style.json`, `/_worker/health`, `/_app/meta` — was
 **not** ported: it was never deployed *and* its bindings are undeclared. It is
-not silently gone either. It lives as data in `src/maps/tile/route.cljc`
+not silently gone either. It lives as data in `src/maps/tile/route.cljk`
 (`withheld`), with a per-route reason, is rendered on the page, and the tests
 assert that nothing appears in both `routes` and `withheld` and that every
 withheld entry carries a reason.
@@ -111,7 +111,7 @@ kebab-case rename that reached code as well as prose.
 the identical broken lines at the revision `migration.edn` pins
 (`etzhayyim/root@45b5906`,
 `60-apps/etzhayyim-project-maps/kotoba/src/feature/index.ts:22`), and custody
-here is exact ([`docs/verify-custody.cljs`](docs/verify-custody.cljs)). So the
+here is exact ([`docs/verify-custody.cljk`](docs/verify-custody.cljk)). So the
 fix belongs upstream too.
 
 ## One tracked file has no target
@@ -176,7 +176,7 @@ has.
 | `npm install` in `kotoba/` | `EALLOWSCRIPTS` — "git dep preparation failed" | **no.** `@etzhayyim/sdk@0.1.0-alpha` declares `main: ./dist/index.js` but commits no `dist/`, delegating the build to `prepare: tsc`, which npm 11 refuses to run for project-scoped git deps. Same upstream cause recorded in app-live `docs/adr/2608180536` |
 | `npm install` in `appview/maps-ui-uqpel6i6/svelte/` | `EUNSUPPORTEDPROTOCOL` — `workspace:*` | **no.** Two dependencies use `workspace:*` and no tracked `package.json` in this repository declares `workspaces` |
 | building the `maps-ui` Worker | `wrangler.jsonc` `alias` maps 8 module specifiers to absolute paths under `/Users/junkawasaki/github/etzhayyim-apps-etzhayyimcojp/` | **no, and not on the author's machine either** — 0 of the 8 targets exist there today. Its SDK is absent from npm and from the workspace |
-| building the `maps-tile-server` Worker | `shadow-cljs release worker` → `dist/worker.js`, then `nbb scripts/smoke-worker.cljs` | **fixed** by the migration. This is the green path in the repository today |
+| building the `maps-tile-server` Worker | `shadow-cljs release worker` → `dist/worker.js`, then `nbb scripts/smoke-worker.cljk` | **fixed** by the migration. This is the green path in the repository today |
 | all four declared Worker routes | `maps.etzhayyim.com`, `uqpel6i6.etzhayyim.com`, `tiles-maps.etzhayyim.com`, `t1l3srv0.etzhayyim.com` are all NXDOMAIN; so are the declared upstreams `mcp.etzhayyim.com` and `maps-langserver.etzhayyim.com`. Only the apex `etzhayyim.com` resolves | DNS, not code |
 | the broken identifier | 9 files | **yes** — but see the parity note above, and fix upstream first so custody stays exact |
 
@@ -199,7 +199,7 @@ and 5 Playwright specs under `svelte/e2e/` (22 cases). Its `package.json`
 declares no `test` script, and `svelte/package.json` declares none either — so
 nothing runs them. They are not counted in the 235 above.
 
-The migrated appview does have a runner: `test/maps/tile/route_test.cljc`,
+The migrated appview does have a runner: `test/maps/tile/route_test.cljk`,
 6 tests / 42 assertions, run by nbb with no build and no browser
 (`docs/operator-quickstart.md` §3).
 
@@ -207,7 +207,7 @@ The migrated appview does have a runner: `test/maps/tile/route_test.cljc`,
 
 Extracted from `etzhayyim/root@45b5906`, path
 `60-apps/etzhayyim-project-maps`, per `migration.edn`, which now declares three
-kinds of divergence and `docs/verify-custody.cljs` checks all three **plus the
+kinds of divergence and `docs/verify-custody.cljk` checks all three **plus the
 declarations themselves**:
 
 | declaration | count | meaning |

@@ -3,7 +3,7 @@
 // 2026-08-18 の移行（../../docs/adr/0001）で 4 点だけ変えた:
 //   1. main    svelte/.svelte-kit/cloudflare/_worker.js → ../../dist/worker.js
 //              前者は tree に存在しない SvelteKit のビルド出力だった。後者は
-//              ../../src/maps/tile/worker.cljs をコンパイルしたものである。
+//              ../../src/maps/tile/worker.cljk をコンパイルしたものである。
 //   2. assets  ブロックを撤去。./svelte/.svelte-kit/cloudflare/client を指して
 //              いたが、その dir も tree に無い。
 //   3. compatibility_flags  nodejs_compat / nodejs_als を撤去。どちらも
@@ -15,7 +15,7 @@
 //      どちらも SvelteKit を名指ししており、移行後は嘘になる。
 //
 // vars はそれ以外 1 つも触っていない。TILE_* の 3 つは移していない tile 配信
-// 面（../../src/maps/tile/route.cljc の `withheld`）が読むはずだった値で、
+// 面（../../src/maps/tile/route.cljk の `withheld`）が読むはずだった値で、
 // 今日は誰も読まない —— 移行前も読んでいなかった（src/app.ts は deploy されて
 // いない）。消すのは移行とは別の決定なので、残して記録する。
 {

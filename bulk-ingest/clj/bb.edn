@@ -8,7 +8,7 @@
  ;; Classpath root = this dir, so a co-located .cljc at
  ;;   maps/bulk_ingest/<x>.cljc  ⇒  ns  maps.bulk-ingest.<x>
  ;;
- ;;   cd 60-apps/etzhayyim-project-maps/bulk-ingest/clj && bb run_tests.clj
+ ;;   cd 60-apps/etzhayyim-project-maps/bulk-ingest/clj && kbb run_tests.cljk
  ;;   # or: bb test
  :paths ["."]
  :deps {

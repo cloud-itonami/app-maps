@@ -87,8 +87,8 @@ deploy 先も中継先も、いま存在しない。`/xrpc/` は到達できな�
 
 ```bash
 cd ../..                                          # repo root
-npx nbb docs/verify-docs-claims.cljk              # 文書の数値が実測と一致するか
-npx nbb docs/verify-custody.cljk                  # 申告なしに upstream から動いていないか
-node ~/github/com-junkawasaki/scripts/resource-guard.mjs run build -- npx shadow-cljs release worker
-npx nbb scripts/smoke-worker.cljk dist/worker.js  # ビルドした bundle を実際に叩く
+kbb --backend sci docs/verify-docs-claims.cljk              # 文書の数値が実測と一致するか
+kbb --backend sci docs/verify-custody.cljk                  # 申告なしに upstream から動いていないか
+node ~/github/com-junkawasaki/scripts/resource-guard.mjs run build -- amu compile --target wasm32-browser worker
+kbb --backend sci scripts/smoke-worker.cljk dist/worker.js  # ビルドした bundle を実際に叩く
 ```

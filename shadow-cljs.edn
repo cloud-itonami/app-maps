@@ -8,7 +8,7 @@
 ;; 読み手が開く TypeScript はどの bundle にも入っていなかった（docs/adr/0001）。
 ;;
 ;; :warnings-as-errors は飾りではない。shadow は未宣言 var や改名された var を
-;; WARNING として扱うので、`shadow-cljs release worker` が exit 0 のまま、
+;; WARNING として扱うので、`amu compile --target wasm32-browser worker` が exit 0 のまま、
 ;; 最初のリクエストで壊れる bundle を書き出す。「ビルドが通った」はそれ自体
 ;; 検査ではない —— 落ちようが無いからである。この repo でも landing 前に
 ;; 実際に落として確かめた（docs/operator-quickstart.md §5）。

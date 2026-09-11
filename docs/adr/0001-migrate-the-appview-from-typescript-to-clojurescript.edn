@@ -14,7 +14,7 @@ appview/maps-tile-server-t1l3srv0 — wrangler.jsonc の main が svelte/.svelte
 
 appview/maps-ui-uqpel6i6 — こちらは形が違う。wrangler.jsonc の main は **src/app.ts そのもの**（7,895 行）を指し、binding は R2 2・Hyperdrive 1・service 4・secrets_store 21 と**宣言済み**である。ただし build できない: wrangler.jsonc の alias が 8 つの module specifier を /Users/junkawasaki/github/etzhayyim-apps-etzhayyimcojp/ 配下の絶対パスへ書き換えており、**8 つとも今日このマシンに存在しない**（親ディレクトリ自体が無い）。assets の指す svelte/build も tree に無く、その SvelteKit half は workspace:* のため install もできない。これは 2026-08-18 の README.md が既に測って記録している。
 
-そして決定的なのは surface が **読めない** ことである。maps-ui の HTTP 応答はすべて @etzhayyim/kotodama-host-sdk の createWorkerExport が組み立てる（export default は _innerExport.fetch を包んだだけ）。この package は npm にも west の 4,212 project にも無い（nbb scripts/repo-search.cljs kotodama-host-sdk で 0 件）。65 の agent tool が SDK 経由で登録されるが、**どの path が何を返すかはこの repo からは決められない**。"
+そして決定的なのは surface が **読めない** ことである。maps-ui の HTTP 応答はすべて @etzhayyim/kotodama-host-sdk の createWorkerExport が組み立てる（export default は _innerExport.fetch を包んだだけ）。この package は npm にも west の 4,212 project にも無い（kbb --backend sci scripts/repo-search.cljk kotodama-host-sdk で 0 件）。65 の agent tool が SDK 経由で登録されるが、**どの path が何を返すかはこの repo からは決められない**。"
   :adr/decision
   "1. maps-tile-server appview を ClojureScript へ移す。
 
@@ -48,7 +48,7 @@ TypeScript は maps-tile-server appview から 0 本になった。撤去した 
 
 - nbb テスト 6 tests / 42 assertions。/xrpc/a/b を 1 セグメントに絞る変異で赤。
 - design-quality 100.00 / 100（gate 95、10 軸。--extra-axes でも 100.00）。scored artifact から viewport meta を剥ぐ変異で 88.76 → FAIL。**同じページをデザインシステムの CSS ゼロで描くと 96.63 で PASS する** —— このスコアは『デザインシステムが入っている』を意味しない。
-- shadow-cljs release、:compiler-options に :warnings-as-errors true。route/dispatch を存在しない名前に改名すると exit 1、**dist/worker.js の sha256 は 1 バイトも動かない**（落ちたビルドは出荷しない）。このキーを :build-options に置くと黙って無視される。
+- amu compile --target wasm32-browser、:compiler-options に :warnings-as-errors true。route/dispatch を存在しない名前に改名すると exit 1、**dist/worker.js の sha256 は 1 バイトも動かない**（落ちたビルドは出荷しない）。このキーを :build-options に置くと黙って無視される。
 - scripts/smoke-worker.cljk —— ビルドした bundle を import して叩く唯一の検査。bundle が無ければ exit 2（0 とも 1 とも別）。
 
 smoke で落ちない検査を 2 つ見つけて直した。(a) デザインシステムの検査を 2 本に割った: `class=\"dads-table\"` は view がライブラリを呼んだこと、`--color-primitive-blue` は stylesheet が実際に bundle に入ったこと。実測、このページで dads-table は CSS 込み 79 / CSS 無し **11**（0 にならない）、--color-primitive-blue は 45 / **0**。(b) route 表の検査を『path が本文に現れる』から『表のセル `<span class=\"tile-mono\">path</span>` として現れる』に変えた —— 前者は route 表を空にしても /health と / が緑のままだった（withheld の理由文に部分文字列として現れるため）。直した後は 4 本とも赤くなる。

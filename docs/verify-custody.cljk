@@ -1,8 +1,8 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 ;; verify-custody.cljs — この repo が「与えられたもの」から、**申告していない形で**
 ;; 動いていないことを検査する。
 ;;
-;;   nbb docs/verify-custody.cljk
+;;   kbb --backend sci docs/verify-custody.cljk
 ;;
 ;; exit 0 = PASS / 1 = FAIL / 3 = 判定できなかった（0 でも 1 でもない）
 ;;

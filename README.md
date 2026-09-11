@@ -49,7 +49,7 @@ declared (R2 ×2, Hyperdrive, 4 services, 21 secrets-store entries). But every
 HTTP response it produces is assembled by `createWorkerExport` from
 `@etzhayyim/kotodama-host-sdk` — a package that is not in this repository, not
 on this machine, and not in any of the 4,212 projects of the surrounding
-workspace (`nbb scripts/repo-search.cljs kotodama-host-sdk` → 0 hits). **Its
+workspace (`kbb --backend sci scripts/repo-search.cljk kotodama-host-sdk` → 0 hits). **Its
 route surface cannot be read here, so it cannot be ported here**; porting it
 would mean inventing behaviour and calling it a migration. It is also not
 deleted: its 73 files match upstream SHA-for-SHA and record the intended
@@ -176,7 +176,7 @@ has.
 | `npm install` in `kotoba/` | `EALLOWSCRIPTS` — "git dep preparation failed" | **no.** `@etzhayyim/sdk@0.1.0-alpha` declares `main: ./dist/index.js` but commits no `dist/`, delegating the build to `prepare: tsc`, which npm 11 refuses to run for project-scoped git deps. Same upstream cause recorded in app-live `docs/adr/2608180536` |
 | `npm install` in `appview/maps-ui-uqpel6i6/svelte/` | `EUNSUPPORTEDPROTOCOL` — `workspace:*` | **no.** Two dependencies use `workspace:*` and no tracked `package.json` in this repository declares `workspaces` |
 | building the `maps-ui` Worker | `wrangler.jsonc` `alias` maps 8 module specifiers to absolute paths under `/Users/junkawasaki/github/etzhayyim-apps-etzhayyimcojp/` | **no, and not on the author's machine either** — 0 of the 8 targets exist there today. Its SDK is absent from npm and from the workspace |
-| building the `maps-tile-server` Worker | `shadow-cljs release worker` → `dist/worker.js`, then `nbb scripts/smoke-worker.cljk` | **fixed** by the migration. This is the green path in the repository today |
+| building the `maps-tile-server` Worker | `amu compile --target wasm32-browser worker` → `dist/worker.js`, then `kbb --backend sci scripts/smoke-worker.cljk` | **fixed** by the migration. This is the green path in the repository today |
 | all four declared Worker routes | `maps.etzhayyim.com`, `uqpel6i6.etzhayyim.com`, `tiles-maps.etzhayyim.com`, `t1l3srv0.etzhayyim.com` are all NXDOMAIN; so are the declared upstreams `mcp.etzhayyim.com` and `maps-langserver.etzhayyim.com`. Only the apex `etzhayyim.com` resolves | DNS, not code |
 | the broken identifier | 9 files | **yes** — but see the parity note above, and fix upstream first so custody stays exact |
 

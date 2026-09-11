@@ -1,9 +1,9 @@
-#!/usr/bin/env bb
+#!/usr/bin/env kbb
 ;; maps bulk-ingest — bb-native test runner (Clojure / babashka; NOT shell, per
 ;; repo rule "ship run_tests.clj, not run_tests.sh"). Run from this dir so the
 ;; scoped bb.edn (classpath root) is picked up:
 ;;
-;;   cd 60-apps/etzhayyim-project-maps/bulk-ingest/clj && bb run_tests.clj
+;;   cd 60-apps/etzhayyim-project-maps/bulk-ingest/clj && kbb run_tests.cljk
 ;;   # or: bb test
 ;;
 ;; Classpath root = this file's dir, so a co-located .cljc at

@@ -25,8 +25,8 @@ else in the repository is blocked on causes outside it.
 ```bash
 git clone git@github.com:cloud-itonami/app-maps.git && cd app-maps
 git ls-files | wc -l               # 216
-npx nbb docs/verify-custody.cljk      # PASS — 200 blobs match etzhayyim/root@45b5906
-npx nbb docs/verify-docs-claims.cljk  # PASS — 39 checks
+kbb --backend sci docs/verify-custody.cljk      # PASS — 200 blobs match etzhayyim/root@45b5906
+kbb --backend sci docs/verify-docs-claims.cljk  # PASS — 39 checks
 ```
 
 `verify-custody.cljs` needs network (it asks GitHub for the upstream subtree)
@@ -98,7 +98,7 @@ cat > /tmp/run.cljs <<'EOF'
 (require '[cljs.test :refer [run-tests]] 'maps.tile.route-test)
 (run-tests 'maps.tile.route-test)
 EOF
-npx --yes nbb --classpath "$CP" /tmp/run.cljs
+npx --yes kbb --backend sci --classpath "$CP" /tmp/run.cljs
 ```
 
 Actual output:
@@ -138,9 +138,9 @@ cat > /tmp/render.cljs <<'EOF'
                   :mcp-url "https://mcp.etzhayyim.com/xrpc/com.etzhayyim.mcp.message"}))
   (println "ok"))
 EOF
-DDS="$K/jp-go-digital-design-system" npx --yes nbb --classpath "$CP" /tmp/render.cljs
+DDS="$K/jp-go-digital-design-system" npx --yes kbb --backend sci --classpath "$CP" /tmp/render.cljs
 
-cd $K/design-quality && npx --yes nbb -m design-quality.cli score /tmp/maps-tile-page.html --min 95
+cd $K/design-quality && npx --yes kbb --backend sci -m design-quality.cli score /tmp/maps-tile-page.html --min 95
 ```
 
 Actual output (tail):
@@ -170,7 +170,7 @@ compiler directly:
 
 ```bash
 node ~/github/com-junkawasaki/scripts/resource-guard.mjs run build -- \
-  npx shadow-cljs release worker
+  amu compile --target wasm32-browser worker
 ls -la dist/worker.js
 ```
 
@@ -225,7 +225,7 @@ grep would match the comment that explains this.
 ## 6. Exercise the bundle you built
 
 ```bash
-npx --yes nbb scripts/smoke-worker.cljk dist/worker.js
+npx --yes kbb --backend sci scripts/smoke-worker.cljk dist/worker.js
 ```
 
 24 checks, actual output (abridged):

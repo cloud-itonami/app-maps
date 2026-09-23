@@ -9,7 +9,7 @@
   repo's injection-boundary idiom). Cross-checks against the canonical
   orgs/etzhayyim/com-etzhayyim-maps python (_LABEL_MAP / name_tokens) are out of scope for the bb
   port and remain asserted by the python suite."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [kotoba.test :refer [deftest is]]
             [kotoba.lang.text :as str]
             [cheshire.core :as json]
             [maps.bulk-ingest.kotoba-feature :as kf]

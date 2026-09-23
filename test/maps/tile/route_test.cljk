@@ -1,5 +1,5 @@
 (ns maps.tile.route-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [kotoba.lang.text :as str]
             [maps.tile.route :as route]
             [maps.tile.view :as view]))

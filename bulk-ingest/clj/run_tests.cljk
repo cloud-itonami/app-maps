@@ -10,7 +10,7 @@
 ;;   maps/bulk_ingest/<x>.cljc  ⇒  ns  maps.bulk-ingest.<x>.
 (require '[babashka.classpath :as cp]
          '[babashka.fs :as fs]
-         '[clojure.test :as t])
+         '[kotoba.test :as t])
 
 (cp/add-classpath (str (fs/parent (fs/absolutize *file*))))
 

@@ -35,7 +35,7 @@
 (require '["node:child_process" :as cp]
          '["node:fs" :as fs]
          '[kotoba.lang.text :as str]
-         '[clojure.edn :as edn])
+         '[kotoba.lang.edn :as edn])
 
 (defn- die! [code & msg]
   (binding [*print-fn* *print-err-fn*] (apply println msg))

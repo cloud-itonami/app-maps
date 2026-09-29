@@ -1,5 +1,5 @@
 {
-  "_comment": "14 vertical zones per maps CLAUDE.md §Layer 3 — atmosphere (5) + underground (4) + ocean (5).",
+  "_comment": "14 vertical zones per maps AGENTS.md §Layer 3 — atmosphere (5) + underground (4) + ocean (5).",
   "zones": [
     { "slug": "atmosphere-troposphere",  "kind": "atmosphere",  "name": "Troposphere",       "minMeters":      0, "maxMeters":  12000 },
     { "slug": "atmosphere-stratosphere", "kind": "atmosphere",  "name": "Stratosphere",      "minMeters":  12000, "maxMeters":  50000 },

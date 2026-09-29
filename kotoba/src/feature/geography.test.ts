@@ -3,7 +3,7 @@
  * registerLake / registerCoastline / registerMaritimeZone / registerAdminArea
  * + listFeatures(label).
  *
- * Per maps CLAUDE.md §"Geography Intelligence (18)" + MIGRATION-TODO
+ * Per maps AGENTS.md §"Geography Intelligence (18)" + MIGRATION-TODO
  * Phase 3 Tier B + ADR-2605231400.
  *
  * Each helper composes registerFeature with the correct label + geometry

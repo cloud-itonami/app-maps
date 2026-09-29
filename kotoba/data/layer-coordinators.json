@@ -1,5 +1,5 @@
 {
-  "_comment": "11 KAMI visual layer coordinators per maps CLAUDE.md §Layer 1.",
+  "_comment": "11 KAMI visual layer coordinators per maps AGENTS.md §Layer 1.",
   "coordinators": [
     { "slug": "tile",       "displayName": "Tile (base raster + vector overlay)",   "description": "Base map raster + vector overlay routing for KAMI." },
     { "slug": "poi",        "displayName": "POI (points of interest)",              "description": "Place / spot rendering." },

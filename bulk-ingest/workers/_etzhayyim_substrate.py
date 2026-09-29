@@ -5,7 +5,7 @@ Per Charter Rider §1 + ADR-2605172000 (kotoba state substrate), all
 Base L2 anchor (the etzhayyim primary substrate). The pre-migration
 workers in this directory write directly to RisingWave via psycopg —
 a centralized PostgreSQL surface explicitly prohibited by the
-substrate boundary table in `/CLAUDE.md`.
+substrate boundary table in `/AGENTS.md`.
 
 This module provides a single seam (``open_substrate_writer``) that
 each worker uses instead of ``psycopg2.connect()`` directly. The
@@ -26,7 +26,7 @@ worker needs ``ETZHAYYIM_PDS_URL`` + ``ETZHAYYIM_PDS_HANDLE`` +
 ``ETZHAYYIM_PDS_APP_PASSWORD`` instead.
 
 Per ADR-2605172000. See also `/CHARTER-RIDER.md` §1 (substrate
-boundary), `/CLAUDE.md` § "Substrate boundary".
+boundary), `/AGENTS.md` § "Substrate boundary".
 """
 from __future__ import annotations
 

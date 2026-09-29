@@ -8,7 +8,7 @@
  * Each helper composes registerFeature with the correct label + geometry
  * kind + type-specific properties.
  *
- * Per maps CLAUDE.md §"Transport Intelligence (24)" + MIGRATION-TODO
+ * Per maps AGENTS.md §"Transport Intelligence (24)" + MIGRATION-TODO
  * Phase 3 + ADR-2605231400.
  */
 

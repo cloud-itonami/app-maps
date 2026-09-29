@@ -13,7 +13,7 @@
  * `60-apps/etzhayyim-project-maps/kotoba/src/feature/witnessed.test.ts`
  * for the canonical end-to-end demo.
  *
- * Per maps CLAUDE.md §Digital Twin + ADR-2605231400.
+ * Per maps AGENTS.md §Digital Twin + ADR-2605231400.
  */
 
 import { kotoba-datomic } from "@etzhayyim/sdk";

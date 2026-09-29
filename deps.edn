@@ -1,6 +1,6 @@
 ;; app-maps — maps-tile-server appview の Worker。
 ;;
-;; 入口は ClojureScript。superproject CLAUDE.md の runtime 順序
+;; 入口は ClojureScript。superproject AGENTS.md の runtime 順序
 ;; (kotoba wasm > clojurewasm > ClojureScript > nbb) に従う。入口を .kotoba に
 ;; しないのは ADR-2606290000 の判断で、kotoba の ingress capability が
 ;; :native-aot / :wasm-aot とも pending だからである。判断の形をした部分を

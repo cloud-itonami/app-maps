@@ -165,7 +165,7 @@ from the scored file and it drops to **88.76 → FAIL**.
 ## 5. Build the bundle
 
 **High-load builds are limited to one at a time** across this workspace
-(the resource governor in the superproject `CLAUDE.md`). Do not call the
+(the resource governor in the superproject `AGENTS.md`). Do not call the
 compiler directly:
 
 ```bash

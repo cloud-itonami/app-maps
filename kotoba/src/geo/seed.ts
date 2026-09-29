@@ -2,7 +2,7 @@
  * Seeder: 14 vertical zones + 34 natural zones + 11 layer coordinators → AT Records.
  *
  * Region + GeoAlias records are NOT seeded here — they're produced by the
- * bulk pipeline (Wikidata SPARQL → site pipeline) per maps CLAUDE.md §DID Count.
+ * bulk pipeline (Wikidata SPARQL → site pipeline) per maps AGENTS.md §DID Count.
  * This seeder covers only the constant fixtures.
  *
  * Usage:

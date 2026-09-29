@@ -218,7 +218,7 @@ declarations themselves**:
 
 The 200 remaining inherited blobs match upstream path-for-path and SHA-for-SHA.
 
-`CLAUDE.md` (48,528 B) is the pre-extraction design record and its relative
+`AGENTS.md` (48,528 B) is the pre-extraction design record and its relative
 links point back into the monorepo; it opens by declaring the actor migrated to
 `orgs/etzhayyim/com-etzhayyim-maps`, so treat it as history, not as
 instructions for this tree. **The migration did not change it**: its

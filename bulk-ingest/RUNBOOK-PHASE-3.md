@@ -43,14 +43,14 @@ Metro / JR East / Toei. No-auth operators (Aomori, OdakyuBus, Donan, etc.)
 publish their own RT URLs and live on `GTFS_RT_FEED_INDEX_URL` instead.
 
 1. **Register**: https://developer.odpt.org/users/sign_up
-   - Use `jun@etzhayyim.com` (per CLAUDE.md userEmail).
+   - Use `jun@etzhayyim.com` (per AGENTS.md userEmail).
    - Confirm email link, then complete profile (purpose = "spatial intel platform").
 2. **Agree to terms per dataset** at https://developer.odpt.org/info/distribution
    (each operator — TokyoMetro, JR-East, Toei — has its own click-through;
    skipping it on a dataset returns 403 even with a valid key).
 3. **Mint key** at https://developer.odpt.org/users/<id>/api_keys → "Generate".
    Copy the `consumerKey` (32-hex string).
-4. **Store in macOS Keychain** (per root CLAUDE.md "Local Secret Storage"):
+4. **Store in macOS Keychain** (per root AGENTS.md "Local Secret Storage"):
    ```bash
    security add-generic-password \
      -s etzhayyim.transit -a ODPT_API_KEY \

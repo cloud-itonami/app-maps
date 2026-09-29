@@ -152,4 +152,4 @@ Acceptance per file:
 - ADR-2605172000 — kotoba substrate (this is the migration's anchor).
 - ADR-2605172100 — substrate boundary (no fiat processors).
 - ADR-2605192115 — Charter Rider §1 (substrate hard rules).
-- `/CLAUDE.md` § "Substrate boundary" — the cross-monorepo table.
+- `/AGENTS.md` § "Substrate boundary" — the cross-monorepo table.

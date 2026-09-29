@@ -17,7 +17,7 @@
 #   ./deploy.sh teardown        # kubectl delete (keep PVC)
 #
 # Prereqs:
-#   - macOS Keychain holds etzhayyim.r2 / etzhayyim.rw credentials (per CLAUDE.md)
+#   - macOS Keychain holds etzhayyim.r2 / etzhayyim.rw credentials (per AGENTS.md)
 #   - GHCR_TOKEN exported (or `gh auth token`) for image push
 #   - kubectl context = vke-a61d513b-... (Vultr VKE)
 set -euo pipefail

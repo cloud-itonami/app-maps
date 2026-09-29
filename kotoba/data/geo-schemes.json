@@ -1,5 +1,5 @@
 {
-  "_comment": "32 supported geo schemes per maps CLAUDE.md §Layer 2. This file is a manifest, not a per-record seed (each scheme corresponds to many geoAlias records, not one record per scheme).",
+  "_comment": "32 supported geo schemes per maps AGENTS.md §Layer 2. This file is a manifest, not a per-record seed (each scheme corresponds to many geoAlias records, not one record per scheme).",
   "schemes": [
     { "id": "iso3166-1",    "displayName": "ISO 3166-1 country code (2-letter)", "exampleCode": "JP", "domain": "geocode" },
     { "id": "iso3166-2",    "displayName": "ISO 3166-2 subdivision",             "exampleCode": "JP-13", "domain": "geocode" },

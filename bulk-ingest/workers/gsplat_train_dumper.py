@@ -300,7 +300,7 @@ def _content_addressed_key(prefix: str, blob: bytes, ext: str) -> tuple[str, str
     """SHA-256 of `blob` → `(b2_key, sha_hex)`. The key is partitioned
     by the first 2 hex chars to keep individual B2 listing cheap.
 
-    Mirrors the root CLAUDE.md "Content-Addressed Blob Storage" rule
+    Mirrors the root AGENTS.md "Content-Addressed Blob Storage" rule
     used by the PDS uploadBlob path. Re-running the same train/bake
     on identical input lands on the same key, so `_b2_head` short-
     circuits the upload and B2 storage cost stays flat."""

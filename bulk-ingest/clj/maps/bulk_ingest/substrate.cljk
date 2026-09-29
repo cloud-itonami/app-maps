@@ -13,7 +13,7 @@
     DID bearer; no server key). Construction RAISES otherwise.
   * `mst` — AT Protocol PDS XRPC (createSession -> createRecord); PDS commits
     to MST + IPFS + Base L2.
-  * `rw` — FORBIDDEN here. The substrate boundary (CLAUDE.md / CHARTER-RIDER §1)
+  * `rw` — FORBIDDEN here. The substrate boundary (AGENTS.md / CHARTER-RIDER §1)
     prohibits the centralized RisingWave/psycopg surface. The legacy
     `_RwSubstrateWriter` is intentionally NOT reimplemented in clj — the
     `.py` retains it as the transitional fallback; this clj seam refuses `rw`
@@ -171,7 +171,7 @@
   "Open a substrate writer per `ETZHAYYIM_SUBSTRATE_MODE` (or opts `:mode`).
   Unlike a context manager, the caller closes via `close-writer` (or use
   `with-substrate-writer`). `rw` is refused — the substrate boundary forbids
-  RisingWave (CLAUDE.md / CHARTER-RIDER §1); the python `.py` keeps the
+  RisingWave (AGENTS.md / CHARTER-RIDER §1); the python `.py` keeps the
   transitional rw fallback."
   ([] (open-substrate-writer {}))
   ([{:keys [mode] :as opts}]
@@ -181,7 +181,7 @@
        "mst" (make-mst-writer opts)
        "rw" (throw (ex-info
                     (str "ETZHAYYIM_SUBSTRATE_MODE=rw (RisingWave/psycopg) is forbidden "
-                         "by the substrate boundary (CHARTER-RIDER §1 / CLAUDE.md). Use "
+                         "by the substrate boundary (CHARTER-RIDER §1 / AGENTS.md). Use "
                          "'kotoba' (canonical Datom log) or 'mst' (AT Protocol ingress). "
                          "The legacy rw fallback remains only in the python worker.")
                     {:type :value-error :mode mode}))

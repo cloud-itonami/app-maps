@@ -1,5 +1,5 @@
 {
-  "_comment": "Maps source DID seed. One entry per source DID per maps CLAUDE.md §Source DIDs. Excludes did:web:site.etzhayyim.com (cross-actor, lives on site PDS).",
+  "_comment": "Maps source DID seed. One entry per source DID per maps AGENTS.md §Source DIDs. Excludes did:web:site.etzhayyim.com (cross-actor, lives on site PDS).",
   "_adr": "2605231400",
   "_lexicon": "com.etzhayyim.maps.source",
   "sources": [
